@@ -67,7 +67,10 @@ export function MedicQuickDoc() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Fixed Header */}
-      <header className="sticky top-0 z-50 border-b bg-primary px-4 py-3 text-primary-foreground">
+      <header 
+        className="sticky top-0 z-50 border-b px-4 py-3"
+        style={{ backgroundColor: '#1B2B4B', color: '#ffffff' }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Droplet className="h-6 w-6" />
@@ -75,19 +78,22 @@ export function MedicQuickDoc() {
           </div>
           <div className="flex items-center gap-3">
             {shockIndex && (
-              <Badge 
-                variant="outline" 
-                className={cn(
-                  "border-primary-foreground/30 text-sm font-mono",
-                  shockIndexMet ? "bg-destructive border-destructive" : "bg-primary-foreground/10"
-                )}
+              <span 
+                className="rounded-full px-3 py-1 text-sm font-mono font-medium"
+                style={{ 
+                  backgroundColor: shockIndexMet ? '#D94F3D' : 'rgba(255,255,255,0.15)',
+                  color: '#ffffff'
+                }}
               >
                 SI: {shockIndex}
-              </Badge>
+              </span>
             )}
-            <Badge variant="outline" className="border-primary-foreground/30 bg-primary-foreground/10">
+            <span 
+              className="rounded-full px-3 py-1 text-sm font-medium"
+              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+            >
               {criteriaMet}/4 criteria
-            </Badge>
+            </span>
           </div>
         </div>
       </header>
@@ -98,7 +104,7 @@ export function MedicQuickDoc() {
           
           {/* Blood Product Type - Large tap targets */}
           <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
               Product Type
             </h2>
             <div className="grid grid-cols-2 gap-3">
@@ -136,14 +142,15 @@ export function MedicQuickDoc() {
 
           {/* Unit Count */}
           <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
               Units
             </h2>
-            <div className="flex items-center justify-center gap-4 rounded-xl border bg-card p-4">
+            <div className="flex items-center justify-center gap-4 rounded-xl border p-4" style={{ backgroundColor: '#ffffff' }}>
               <button
                 type="button"
                 onClick={() => setUnitCount(Math.max(1, unitCount - 1))}
-                className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-border bg-muted text-xl font-bold transition-all active:scale-95 active:bg-muted/80"
+                className="flex h-14 w-14 items-center justify-center rounded-full border-2 text-xl font-bold transition-all active:scale-95"
+                style={{ borderColor: '#E5E7EB', backgroundColor: '#F3F4F6' }}
                 disabled={unitCount <= 1}
               >
                 <Minus className="h-6 w-6" />
@@ -152,7 +159,8 @@ export function MedicQuickDoc() {
               <button
                 type="button"
                 onClick={() => setUnitCount(Math.min(6, unitCount + 1))}
-                className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary bg-primary text-xl font-bold text-primary-foreground transition-all active:scale-95 active:bg-primary/90"
+                className="flex h-14 w-14 items-center justify-center rounded-full border-2 text-xl font-bold transition-all active:scale-95"
+                style={{ borderColor: '#1B2B4B', backgroundColor: '#1B2B4B', color: '#ffffff' }}
                 disabled={unitCount >= 6}
               >
                 <Plus className="h-6 w-6" />
@@ -162,7 +170,7 @@ export function MedicQuickDoc() {
 
           {/* Barcode Scanner */}
           <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
               Unit ID
             </h2>
             <button
@@ -171,22 +179,21 @@ export function MedicQuickDoc() {
                 // In production this would trigger device camera/scanner
                 setScannedBarcode('W' + Math.random().toString().slice(2, 10))
               }}
-              className={cn(
-                "flex w-full items-center justify-center gap-3 rounded-xl border-2 border-dashed p-6 transition-all active:scale-[0.99]",
-                scannedBarcode
-                  ? "border-success bg-success/10"
-                  : "border-border hover:border-primary/50"
-              )}
+              className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-dashed p-6 transition-all active:scale-[0.99]"
+              style={{
+                borderColor: scannedBarcode ? '#22C55E' : '#E5E7EB',
+                backgroundColor: scannedBarcode ? 'rgba(34, 197, 94, 0.1)' : undefined,
+              }}
             >
               {scannedBarcode ? (
                 <>
-                  <Check className="h-6 w-6 text-success" />
+                  <Check className="h-6 w-6" style={{ color: '#22C55E' }} />
                   <span className="font-mono text-lg font-semibold">{scannedBarcode}</span>
                 </>
               ) : (
                 <>
-                  <Scan className="h-6 w-6 text-muted-foreground" />
-                  <span className="text-muted-foreground">Tap to scan barcode</span>
+                  <Scan className="h-6 w-6" style={{ color: '#6B7280' }} />
+                  <span style={{ color: '#6B7280' }}>Tap to scan barcode</span>
                 </>
               )}
             </button>
@@ -194,7 +201,7 @@ export function MedicQuickDoc() {
 
           {/* Indication - Large tap targets */}
           <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
               Indication
             </h2>
             <div className="grid grid-cols-2 gap-3">
@@ -226,19 +233,23 @@ export function MedicQuickDoc() {
 
           {/* Vitals - Range selectors instead of number inputs */}
           <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
               Vitals
             </h2>
             <div className="space-y-4">
               {/* SBP */}
-              <div className="rounded-xl border bg-card p-4">
+              <div className="rounded-xl border p-4" style={{ backgroundColor: '#ffffff' }}>
                 <div className="mb-3 flex items-center justify-between">
                   <span className="font-semibold">SBP</span>
-                  <Badge variant={sbpRange !== null && sbpRange < 90 ? "default" : "secondary"} className={cn(
-                    sbpRange !== null && sbpRange < 90 && "bg-success"
-                  )}>
+                  <span 
+                    className="rounded-full px-3 py-1 text-sm font-medium"
+                    style={{ 
+                      backgroundColor: sbpRange !== null && sbpRange < 90 ? '#22C55E' : '#E5E7EB',
+                      color: sbpRange !== null && sbpRange < 90 ? '#ffffff' : '#374151'
+                    }}
+                  >
                     {sbpRange !== null ? (sbpRange < 90 ? 'Met (<90)' : 'Not Met') : '—'}
-                  </Badge>
+                  </span>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   {SBP_RANGES.map((range) => {
@@ -264,14 +275,18 @@ export function MedicQuickDoc() {
               </div>
 
               {/* HR */}
-              <div className="rounded-xl border bg-card p-4">
+              <div className="rounded-xl border p-4" style={{ backgroundColor: '#ffffff' }}>
                 <div className="mb-3 flex items-center justify-between">
                   <span className="font-semibold">HR</span>
-                  <Badge variant={hrRange !== null && hrRange > 100 ? "default" : "secondary"} className={cn(
-                    hrRange !== null && hrRange > 100 && "bg-success"
-                  )}>
+                  <span 
+                    className="rounded-full px-3 py-1 text-sm font-medium"
+                    style={{ 
+                      backgroundColor: hrRange !== null && hrRange > 100 ? '#22C55E' : '#E5E7EB',
+                      color: hrRange !== null && hrRange > 100 ? '#ffffff' : '#374151'
+                    }}
+                  >
                     {hrRange !== null ? (hrRange > 100 ? 'Met (>100)' : 'Not Met') : '—'}
-                  </Badge>
+                  </span>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   {HR_RANGES.map((range) => {
