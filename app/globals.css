@@ -4,51 +4,39 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.985 0.002 247);
-  --foreground: oklch(0.18 0.02 247);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 247);
+  --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 247);
-  --primary: oklch(0.45 0.12 247);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.01 247);
-  --secondary-foreground: oklch(0.25 0.02 247);
-  --muted: oklch(0.96 0.008 247);
-  --muted-foreground: oklch(0.5 0.02 247);
-  --accent: oklch(0.94 0.02 247);
-  --accent-foreground: oklch(0.25 0.02 247);
-  --destructive: oklch(0.55 0.22 27);
-  --destructive-foreground: oklch(0.55 0.22 27);
-  --border: oklch(0.91 0.01 247);
-  --input: oklch(0.91 0.01 247);
-  --ring: oklch(0.45 0.12 247);
-  --chart-1: oklch(0.55 0.18 27);
-  --chart-2: oklch(0.6 0.12 185);
-  --chart-3: oklch(0.45 0.12 247);
-  --chart-4: oklch(0.75 0.15 145);
-  --chart-5: oklch(0.65 0.14 85);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.25 0.03 247);
-  --sidebar-foreground: oklch(0.96 0 0);
-  --sidebar-primary: oklch(0.55 0.12 247);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.32 0.03 247);
-  --sidebar-accent-foreground: oklch(0.96 0 0);
-  --sidebar-border: oklch(0.35 0.02 247);
-  --sidebar-ring: oklch(0.45 0.12 247);
-  
-  /* Custom tokens for provenance badges */
-  --ems-badge: oklch(0.65 0.18 145);
-  --ems-badge-foreground: oklch(0.18 0.05 145);
-  --manual-badge: oklch(0.7 0.12 85);
-  --manual-badge-foreground: oklch(0.25 0.05 85);
-  --ehr-badge: oklch(0.6 0.14 247);
-  --ehr-badge-foreground: oklch(0.99 0 0);
-  --success: oklch(0.65 0.18 145);
-  --success-foreground: oklch(0.18 0.05 145);
-  --warning: oklch(0.75 0.15 85);
-  --warning-foreground: oklch(0.25 0.08 85);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 .dark {
@@ -125,17 +113,6 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  /* Provenance badge colors */
-  --color-ems-badge: var(--ems-badge);
-  --color-ems-badge-foreground: var(--ems-badge-foreground);
-  --color-manual-badge: var(--manual-badge);
-  --color-manual-badge-foreground: var(--manual-badge-foreground);
-  --color-ehr-badge: var(--ehr-badge);
-  --color-ehr-badge-foreground: var(--ehr-badge-foreground);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
 }
 
 @layer base {
