@@ -7,8 +7,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'BloodTrack | Prehospital Blood Transfusion Registry',
+  description: 'National prehospital blood transfusion registry and performance improvement platform',
   generator: 'v0.app',
   icons: {
     icon: [
