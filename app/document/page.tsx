@@ -1,7 +1,5 @@
-'use client'
-
-import { QuickDocumentForm } from '@/components/document/quick-document-form'
+import { RapidDocument } from '@/components/document/rapid-document'
 
 export default function DocumentPage() {
-  return <QuickDocumentForm />
+  return <RapidDocument />
 }
