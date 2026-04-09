@@ -1,10 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
+import { useState } from 'react'
 import { 
   Droplet, 
   Scan, 
@@ -111,26 +107,30 @@ export function MedicQuickDoc() {
                 { type: 'pRBC', label: 'pRBCs', desc: 'Packed Red Blood Cells' },
                 { type: 'Plasma', label: 'Plasma', desc: 'Liquid or Dried' },
                 { type: 'Platelets', label: 'Platelets', desc: 'Platelet Concentrate' },
-              ].map((p) => (
-                <button
-                  key={p.type}
-                  type="button"
-                  onClick={() => setProductType(p.type as ProductType)}
-                  className={cn(
-                    "flex flex-col items-center justify-center rounded-xl border-2 p-4 transition-all active:scale-[0.98]",
-                    "min-h-[88px]",
-                    productType === p.type
-                      ? "border-primary bg-primary text-primary-foreground shadow-lg"
-                      : "border-border bg-card hover:border-primary/50"
-                  )}
-                >
-                  <span className="text-lg font-bold">{p.label}</span>
-                  <span className={cn(
-                    "text-xs",
-                    productType === p.type ? "text-primary-foreground/80" : "text-muted-foreground"
-                  )}>{p.desc}</span>
-                </button>
-              ))}
+              ].map((p) => {
+                const isSelected = productType === p.type
+                return (
+                  <button
+                    key={p.type}
+                    type="button"
+                    onClick={() => setProductType(p.type as ProductType)}
+                    className="flex flex-col items-center justify-center rounded-xl border-2 p-4 transition-all active:scale-[0.98] min-h-[88px]"
+                    style={{
+                      borderColor: isSelected ? '#1B2B4B' : undefined,
+                      backgroundColor: isSelected ? '#1B2B4B' : undefined,
+                      color: isSelected ? '#ffffff' : undefined,
+                    }}
+                  >
+                    <span className="text-lg font-bold">{p.label}</span>
+                    <span 
+                      className="text-xs"
+                      style={{ opacity: isSelected ? 0.8 : 0.6 }}
+                    >
+                      {p.desc}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </section>
 
@@ -199,26 +199,28 @@ export function MedicQuickDoc() {
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { type: 'trauma', label: 'Trauma', color: 'destructive' },
-                { type: 'gi-bleed', label: 'GI Bleed', color: 'warning' },
-                { type: 'obstetric', label: 'Obstetric', color: 'accent' },
-                { type: 'medical', label: 'Medical/Other', color: 'muted' },
-              ].map((i) => (
-                <button
-                  key={i.type}
-                  type="button"
-                  onClick={() => setIndication(i.type as Indication)}
-                  className={cn(
-                    "flex items-center justify-center rounded-xl border-2 p-4 text-lg font-semibold transition-all active:scale-[0.98]",
-                    "min-h-[64px]",
-                    indication === i.type
-                      ? "border-primary bg-primary text-primary-foreground shadow-lg"
-                      : "border-border bg-card hover:border-primary/50"
-                  )}
-                >
-                  {i.label}
-                </button>
-              ))}
+                { type: 'trauma', label: 'Trauma' },
+                { type: 'gi-bleed', label: 'GI Bleed' },
+                { type: 'obstetric', label: 'Obstetric' },
+                { type: 'medical', label: 'Medical/Other' },
+              ].map((i) => {
+                const isSelected = indication === i.type
+                return (
+                  <button
+                    key={i.type}
+                    type="button"
+                    onClick={() => setIndication(i.type as Indication)}
+                    className="flex items-center justify-center rounded-xl border-2 p-4 text-lg font-semibold transition-all active:scale-[0.98] min-h-[64px]"
+                    style={{
+                      borderColor: isSelected ? '#1B2B4B' : undefined,
+                      backgroundColor: isSelected ? '#1B2B4B' : undefined,
+                      color: isSelected ? '#ffffff' : undefined,
+                    }}
+                  >
+                    {i.label}
+                  </button>
+                )
+              })}
             </div>
           </section>
 
@@ -239,23 +241,25 @@ export function MedicQuickDoc() {
                   </Badge>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
-                  {SBP_RANGES.map((range) => (
-                    <button
-                      key={range.label}
-                      type="button"
-                      onClick={() => setSbpRange(range.value)}
-                      className={cn(
-                        "rounded-lg border-2 py-3 text-center font-mono text-lg font-semibold transition-all active:scale-95",
-                        sbpRange === range.value
-                          ? range.met
-                            ? "border-success bg-success text-success-foreground"
-                            : "border-primary bg-primary text-primary-foreground"
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      {range.label}
-                    </button>
-                  ))}
+                  {SBP_RANGES.map((range) => {
+                    const isSelected = sbpRange === range.value
+                    const isCriteriaMet = range.met
+                    return (
+                      <button
+                        key={range.label}
+                        type="button"
+                        onClick={() => setSbpRange(range.value)}
+                        className="rounded-lg border-2 py-3 text-center font-mono text-lg font-semibold transition-all active:scale-95"
+                        style={{
+                          borderColor: isSelected ? (isCriteriaMet ? '#22C55E' : '#1B2B4B') : undefined,
+                          backgroundColor: isSelected ? (isCriteriaMet ? '#22C55E' : '#1B2B4B') : undefined,
+                          color: isSelected ? '#ffffff' : undefined,
+                        }}
+                      >
+                        {range.label}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -270,23 +274,25 @@ export function MedicQuickDoc() {
                   </Badge>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
-                  {HR_RANGES.map((range) => (
-                    <button
-                      key={range.label}
-                      type="button"
-                      onClick={() => setHrRange(range.value)}
-                      className={cn(
-                        "rounded-lg border-2 py-3 text-center font-mono text-lg font-semibold transition-all active:scale-95",
-                        hrRange === range.value
-                          ? range.met
-                            ? "border-success bg-success text-success-foreground"
-                            : "border-primary bg-primary text-primary-foreground"
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      {range.label}
-                    </button>
-                  ))}
+                  {HR_RANGES.map((range) => {
+                    const isSelected = hrRange === range.value
+                    const isCriteriaMet = range.met
+                    return (
+                      <button
+                        key={range.label}
+                        type="button"
+                        onClick={() => setHrRange(range.value)}
+                        className="rounded-lg border-2 py-3 text-center font-mono text-lg font-semibold transition-all active:scale-95"
+                        style={{
+                          borderColor: isSelected ? (isCriteriaMet ? '#22C55E' : '#1B2B4B') : undefined,
+                          backgroundColor: isSelected ? (isCriteriaMet ? '#22C55E' : '#1B2B4B') : undefined,
+                          color: isSelected ? '#ffffff' : undefined,
+                        }}
+                      >
+                        {range.label}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -294,22 +300,21 @@ export function MedicQuickDoc() {
               <button
                 type="button"
                 onClick={() => setAlteredMental(!alteredMental)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-xl border-2 p-4 transition-all active:scale-[0.99]",
-                  alteredMental
-                    ? "border-success bg-success/10"
-                    : "border-border bg-card"
-                )}
+                className="flex w-full items-center justify-between rounded-xl border-2 p-4 transition-all active:scale-[0.99]"
+                style={{
+                  borderColor: alteredMental ? '#22C55E' : undefined,
+                  backgroundColor: alteredMental ? 'rgba(34, 197, 94, 0.1)' : undefined,
+                }}
               >
                 <span className="font-semibold">Altered Mental Status</span>
-                <div className={cn(
-                  "flex h-8 w-14 items-center rounded-full p-1 transition-colors",
-                  alteredMental ? "bg-success" : "bg-muted"
-                )}>
-                  <div className={cn(
-                    "h-6 w-6 rounded-full bg-white shadow transition-transform",
-                    alteredMental && "translate-x-6"
-                  )} />
+                <div 
+                  className="flex h-8 w-14 items-center rounded-full p-1 transition-colors"
+                  style={{ backgroundColor: alteredMental ? '#22C55E' : '#E5E7EB' }}
+                >
+                  <div 
+                    className="h-6 w-6 rounded-full bg-white shadow transition-transform"
+                    style={{ transform: alteredMental ? 'translateX(24px)' : 'translateX(0)' }}
+                  />
                 </div>
               </button>
             </div>
@@ -320,40 +325,36 @@ export function MedicQuickDoc() {
             <button
               type="button"
               onClick={() => setColdChain(!coldChain)}
-              className={cn(
-                "flex w-full items-center gap-4 rounded-xl border-2 p-4 transition-all active:scale-[0.99]",
-                coldChain
-                  ? "border-primary bg-primary/5"
-                  : "border-destructive bg-destructive/10"
-              )}
+              className="flex w-full items-center gap-4 rounded-xl border-2 p-4 transition-all active:scale-[0.99]"
+              style={{
+                borderColor: coldChain ? '#1B2B4B' : '#D94F3D',
+                backgroundColor: coldChain ? 'rgba(27, 43, 75, 0.05)' : 'rgba(217, 79, 61, 0.1)',
+              }}
             >
-              <div className={cn(
-                "flex h-12 w-12 items-center justify-center rounded-full",
-                coldChain ? "bg-primary/20" : "bg-destructive/20"
-              )}>
+              <div 
+                className="flex h-12 w-12 items-center justify-center rounded-full"
+                style={{ backgroundColor: coldChain ? 'rgba(27, 43, 75, 0.2)' : 'rgba(217, 79, 61, 0.2)' }}
+              >
                 {coldChain ? (
-                  <Snowflake className="h-6 w-6 text-primary" />
+                  <Snowflake className="h-6 w-6" style={{ color: '#1B2B4B' }} />
                 ) : (
-                  <AlertTriangle className="h-6 w-6 text-destructive" />
+                  <AlertTriangle className="h-6 w-6" style={{ color: '#D94F3D' }} />
                 )}
               </div>
               <div className="flex-1 text-left">
                 <p className="font-semibold">Cold Chain</p>
-                <p className={cn(
-                  "text-sm",
-                  coldChain ? "text-muted-foreground" : "text-destructive"
-                )}>
+                <p className="text-sm" style={{ color: coldChain ? '#6B7280' : '#D94F3D' }}>
                   {coldChain ? 'Confirmed - product maintained at temp' : 'NOT confirmed - document reason'}
                 </p>
               </div>
-              <div className={cn(
-                "flex h-8 w-14 items-center rounded-full p-1 transition-colors",
-                coldChain ? "bg-primary" : "bg-destructive"
-              )}>
-                <div className={cn(
-                  "h-6 w-6 rounded-full bg-white shadow transition-transform",
-                  coldChain && "translate-x-6"
-                )} />
+              <div 
+                className="flex h-8 w-14 items-center rounded-full p-1 transition-colors"
+                style={{ backgroundColor: coldChain ? '#1B2B4B' : '#D94F3D' }}
+              >
+                <div 
+                  className="h-6 w-6 rounded-full bg-white shadow transition-transform"
+                  style={{ transform: coldChain ? 'translateX(24px)' : 'translateX(0)' }}
+                />
               </div>
             </button>
           </section>
@@ -362,30 +363,27 @@ export function MedicQuickDoc() {
       </main>
 
       {/* Fixed Bottom Submit Button */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <Button
-          size="lg"
-          className={cn(
-            "h-14 w-full text-lg font-semibold transition-all",
-            canSubmit
-              ? "bg-accent hover:bg-accent/90"
-              : "bg-muted text-muted-foreground"
-          )}
+      <div className="fixed bottom-0 left-0 right-0 border-t bg-white/95 p-4 backdrop-blur">
+        <button
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-xl text-lg font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{
+            backgroundColor: canSubmit ? '#D94F3D' : '#9CA3AF',
+          }}
           disabled={!canSubmit || submitting}
           onClick={handleSubmit}
         >
           {submitting ? (
-            <span className="flex items-center gap-2">
+            <>
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
               Submitting...
-            </span>
+            </>
           ) : (
-            <span className="flex items-center gap-2">
+            <>
               <Send className="h-5 w-5" />
               Submit Transfusion
-            </span>
+            </>
           )}
-        </Button>
+        </button>
       </div>
     </div>
   )
