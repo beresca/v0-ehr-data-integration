@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Droplet, 
   Scan, 
@@ -11,6 +11,11 @@ import {
   AlertTriangle,
   Send
 } from 'lucide-react'
+
+// Debug: log when component mounts
+if (typeof window !== 'undefined') {
+  console.log('[v0] medic-quick-doc module loaded')
+}
 
 type ProductType = 'LTOWB' | 'pRBC' | 'Plasma' | 'Platelets' | null
 type Indication = 'trauma' | 'gi-bleed' | 'obstetric' | 'medical' | null
@@ -55,6 +60,11 @@ export function MedicQuickDoc() {
 
   // Check if form is complete enough to submit
   const canSubmit = productType !== null && indication !== null && (sbpRange !== null || hrRange !== null)
+
+  // Debug: log on mount
+  useEffect(() => {
+    console.log('[v0] MedicQuickDoc component mounted')
+  }, [])
 
   const handleSubmit = async () => {
     setSubmitting(true)
