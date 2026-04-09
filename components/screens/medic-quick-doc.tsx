@@ -1,413 +1,441 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { 
-  Droplet, 
-  Scan, 
-  Check, 
-  Minus, 
-  Plus,
-  Snowflake,
-  AlertTriangle,
-  Send
-} from 'lucide-react'
-
-// Debug: log when component mounts
-if (typeof window !== 'undefined') {
-  console.log('[v0] medic-quick-doc module loaded')
-}
-
-type ProductType = 'LTOWB' | 'pRBC' | 'Plasma' | 'Platelets' | null
-type Indication = 'trauma' | 'gi-bleed' | 'obstetric' | 'medical' | null
-
-// Preset ranges for quick tap selection
-const SBP_RANGES = [
-  { label: '<70', value: 65, met: true },
-  { label: '70-89', value: 80, met: true },
-  { label: '90-99', value: 95, met: false },
-  { label: '100+', value: 110, met: false },
-]
-
-const HR_RANGES = [
-  { label: '<80', value: 75, met: false },
-  { label: '80-99', value: 90, met: false },
-  { label: '100-119', value: 110, met: true },
-  { label: '120+', value: 130, met: true },
-]
+import { useState } from 'react'
 
 export function MedicQuickDoc() {
-  const [productType, setProductType] = useState<ProductType>(null)
-  const [indication, setIndication] = useState<Indication>(null)
+  const [productType, setProductType] = useState<string | null>(null)
   const [unitCount, setUnitCount] = useState(1)
+  const [indication, setIndication] = useState<string | null>(null)
   const [sbpRange, setSbpRange] = useState<number | null>(null)
   const [hrRange, setHrRange] = useState<number | null>(null)
-  const [coldChain, setColdChain] = useState(true)
   const [alteredMental, setAlteredMental] = useState(false)
-  const [scannedBarcode, setScannedBarcode] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [coldChain, setColdChain] = useState(true)
+  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null)
 
   // Calculate shock index
   const shockIndex = sbpRange && hrRange ? (hrRange / sbpRange).toFixed(1) : null
   const shockIndexMet = shockIndex ? parseFloat(shockIndex) > 0.9 : false
 
   // Count criteria met
-  const criteriaMet = [
-    sbpRange !== null && sbpRange < 90,
-    hrRange !== null && hrRange > 100,
-    shockIndexMet,
-    alteredMental,
-  ].filter(Boolean).length
+  let criteriaMet = 0
+  if (sbpRange !== null && sbpRange < 90) criteriaMet++
+  if (hrRange !== null && hrRange > 100) criteriaMet++
+  if (shockIndexMet) criteriaMet++
+  if (alteredMental) criteriaMet++
 
-  // Check if form is complete enough to submit
   const canSubmit = productType !== null && indication !== null && (sbpRange !== null || hrRange !== null)
 
-  // Debug: log on mount
-  useEffect(() => {
-    console.log('[v0] MedicQuickDoc component mounted')
-  }, [])
-
-  const handleSubmit = async () => {
-    setSubmitting(true)
-    // Simulate submission
-    await new Promise(r => setTimeout(r, 1000))
-    setSubmitting(false)
-    alert('Submitted! Case created.')
-  }
-
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      {/* Fixed Header */}
-      <header 
-        className="sticky top-0 z-50 border-b px-4 py-3"
-        style={{ backgroundColor: '#1B2B4B', color: '#ffffff' }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Droplet className="h-6 w-6" />
-            <span className="text-lg font-bold">BloodTrack</span>
+    <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC', fontFamily: 'system-ui, sans-serif' }}>
+      {/* Header */}
+      <header style={{ 
+        position: 'sticky', 
+        top: 0, 
+        zIndex: 50, 
+        backgroundColor: '#1B2B4B', 
+        color: '#ffffff',
+        padding: '12px 16px',
+        borderBottom: '1px solid #2d3f5f'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 20 }}>🩸</span>
+            <span style={{ fontSize: 18, fontWeight: 700 }}>BloodTrack</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', gap: 8 }}>
             {shockIndex && (
-              <span 
-                className="rounded-full px-3 py-1 text-sm font-mono font-medium"
-                style={{ 
-                  backgroundColor: shockIndexMet ? '#D94F3D' : 'rgba(255,255,255,0.15)',
-                  color: '#ffffff'
-                }}
-              >
+              <span style={{ 
+                backgroundColor: shockIndexMet ? '#D94F3D' : 'rgba(255,255,255,0.15)',
+                padding: '4px 12px',
+                borderRadius: 20,
+                fontSize: 14,
+                fontFamily: 'monospace'
+              }}>
                 SI: {shockIndex}
               </span>
             )}
-            <span 
-              className="rounded-full px-3 py-1 text-sm font-medium"
-              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-            >
+            <span style={{ 
+              backgroundColor: 'rgba(255,255,255,0.15)',
+              padding: '4px 12px',
+              borderRadius: 20,
+              fontSize: 14
+            }}>
               {criteriaMet}/4 criteria
             </span>
           </div>
         </div>
       </header>
 
-      {/* Scrollable Content */}
-      <main className="flex-1 overflow-auto p-4 pb-28">
-        <div className="mx-auto max-w-2xl space-y-6">
-          
-          {/* Blood Product Type - Large tap targets */}
-          <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
-              Product Type
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { type: 'LTOWB', label: 'LTOWB', desc: 'Low-Titer O Whole Blood' },
-                { type: 'pRBC', label: 'pRBCs', desc: 'Packed Red Blood Cells' },
-                { type: 'Plasma', label: 'Plasma', desc: 'Liquid or Dried' },
-                { type: 'Platelets', label: 'Platelets', desc: 'Platelet Concentrate' },
-              ].map((p) => {
-                const isSelected = productType === p.type
-                return (
-                  <button
-                    key={p.type}
-                    type="button"
-                    onClick={() => setProductType(p.type as ProductType)}
-                    className="flex flex-col items-center justify-center rounded-xl border-2 p-4 transition-all active:scale-[0.98] min-h-[88px]"
-                    style={{
-                      borderColor: isSelected ? '#1B2B4B' : undefined,
-                      backgroundColor: isSelected ? '#1B2B4B' : undefined,
-                      color: isSelected ? '#ffffff' : undefined,
-                    }}
-                  >
-                    <span className="text-lg font-bold">{p.label}</span>
-                    <span 
-                      className="text-xs"
-                      style={{ opacity: isSelected ? 0.8 : 0.6 }}
-                    >
-                      {p.desc}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-
-          {/* Unit Count */}
-          <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
-              Units
-            </h2>
-            <div className="flex items-center justify-center gap-4 rounded-xl border p-4" style={{ backgroundColor: '#ffffff' }}>
+      {/* Main Content */}
+      <main style={{ padding: 16, paddingBottom: 100, display: 'flex', flexDirection: 'column', gap: 24 }}>
+        
+        {/* Product Type */}
+        <section>
+          <h2 style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', marginBottom: 12 }}>
+            Product Type
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+            {['LTOWB', 'pRBCs', 'Plasma', 'Platelets'].map((type) => (
               <button
-                type="button"
-                onClick={() => setUnitCount(Math.max(1, unitCount - 1))}
-                className="flex h-14 w-14 items-center justify-center rounded-full border-2 text-xl font-bold transition-all active:scale-95"
-                style={{ borderColor: '#E5E7EB', backgroundColor: '#F3F4F6' }}
-                disabled={unitCount <= 1}
-              >
-                <Minus className="h-6 w-6" />
-              </button>
-              <span className="w-20 text-center text-5xl font-bold tabular-nums">{unitCount}</span>
-              <button
-                type="button"
-                onClick={() => setUnitCount(Math.min(6, unitCount + 1))}
-                className="flex h-14 w-14 items-center justify-center rounded-full border-2 text-xl font-bold transition-all active:scale-95"
-                style={{ borderColor: '#1B2B4B', backgroundColor: '#1B2B4B', color: '#ffffff' }}
-                disabled={unitCount >= 6}
-              >
-                <Plus className="h-6 w-6" />
-              </button>
-            </div>
-          </section>
-
-          {/* Barcode Scanner */}
-          <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
-              Unit ID
-            </h2>
-            <button
-              type="button"
-              onClick={() => {
-                // In production this would trigger device camera/scanner
-                setScannedBarcode('W' + Math.random().toString().slice(2, 10))
-              }}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-dashed p-6 transition-all active:scale-[0.99]"
-              style={{
-                borderColor: scannedBarcode ? '#22C55E' : '#E5E7EB',
-                backgroundColor: scannedBarcode ? 'rgba(34, 197, 94, 0.1)' : undefined,
-              }}
-            >
-              {scannedBarcode ? (
-                <>
-                  <Check className="h-6 w-6" style={{ color: '#22C55E' }} />
-                  <span className="font-mono text-lg font-semibold">{scannedBarcode}</span>
-                </>
-              ) : (
-                <>
-                  <Scan className="h-6 w-6" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#6B7280' }}>Tap to scan barcode</span>
-                </>
-              )}
-            </button>
-          </section>
-
-          {/* Indication - Large tap targets */}
-          <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
-              Indication
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { type: 'trauma', label: 'Trauma' },
-                { type: 'gi-bleed', label: 'GI Bleed' },
-                { type: 'obstetric', label: 'Obstetric' },
-                { type: 'medical', label: 'Medical/Other' },
-              ].map((i) => {
-                const isSelected = indication === i.type
-                return (
-                  <button
-                    key={i.type}
-                    type="button"
-                    onClick={() => setIndication(i.type as Indication)}
-                    className="flex items-center justify-center rounded-xl border-2 p-4 text-lg font-semibold transition-all active:scale-[0.98] min-h-[64px]"
-                    style={{
-                      borderColor: isSelected ? '#1B2B4B' : undefined,
-                      backgroundColor: isSelected ? '#1B2B4B' : undefined,
-                      color: isSelected ? '#ffffff' : undefined,
-                    }}
-                  >
-                    {i.label}
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-
-          {/* Vitals - Range selectors instead of number inputs */}
-          <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
-              Vitals
-            </h2>
-            <div className="space-y-4">
-              {/* SBP */}
-              <div className="rounded-xl border p-4" style={{ backgroundColor: '#ffffff' }}>
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="font-semibold">SBP</span>
-                  <span 
-                    className="rounded-full px-3 py-1 text-sm font-medium"
-                    style={{ 
-                      backgroundColor: sbpRange !== null && sbpRange < 90 ? '#22C55E' : '#E5E7EB',
-                      color: sbpRange !== null && sbpRange < 90 ? '#ffffff' : '#374151'
-                    }}
-                  >
-                    {sbpRange !== null ? (sbpRange < 90 ? 'Met (<90)' : 'Not Met') : '—'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {SBP_RANGES.map((range) => {
-                    const isSelected = sbpRange === range.value
-                    const isCriteriaMet = range.met
-                    return (
-                      <button
-                        key={range.label}
-                        type="button"
-                        onClick={() => setSbpRange(range.value)}
-                        className="rounded-lg border-2 py-3 text-center font-mono text-lg font-semibold transition-all active:scale-95"
-                        style={{
-                          borderColor: isSelected ? (isCriteriaMet ? '#22C55E' : '#1B2B4B') : undefined,
-                          backgroundColor: isSelected ? (isCriteriaMet ? '#22C55E' : '#1B2B4B') : undefined,
-                          color: isSelected ? '#ffffff' : undefined,
-                        }}
-                      >
-                        {range.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* HR */}
-              <div className="rounded-xl border p-4" style={{ backgroundColor: '#ffffff' }}>
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="font-semibold">HR</span>
-                  <span 
-                    className="rounded-full px-3 py-1 text-sm font-medium"
-                    style={{ 
-                      backgroundColor: hrRange !== null && hrRange > 100 ? '#22C55E' : '#E5E7EB',
-                      color: hrRange !== null && hrRange > 100 ? '#ffffff' : '#374151'
-                    }}
-                  >
-                    {hrRange !== null ? (hrRange > 100 ? 'Met (>100)' : 'Not Met') : '—'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {HR_RANGES.map((range) => {
-                    const isSelected = hrRange === range.value
-                    const isCriteriaMet = range.met
-                    return (
-                      <button
-                        key={range.label}
-                        type="button"
-                        onClick={() => setHrRange(range.value)}
-                        className="rounded-lg border-2 py-3 text-center font-mono text-lg font-semibold transition-all active:scale-95"
-                        style={{
-                          borderColor: isSelected ? (isCriteriaMet ? '#22C55E' : '#1B2B4B') : undefined,
-                          backgroundColor: isSelected ? (isCriteriaMet ? '#22C55E' : '#1B2B4B') : undefined,
-                          color: isSelected ? '#ffffff' : undefined,
-                        }}
-                      >
-                        {range.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Altered Mental Status */}
-              <button
-                type="button"
-                onClick={() => setAlteredMental(!alteredMental)}
-                className="flex w-full items-center justify-between rounded-xl border-2 p-4 transition-all active:scale-[0.99]"
+                key={type}
+                onClick={() => setProductType(type)}
                 style={{
-                  borderColor: alteredMental ? '#22C55E' : undefined,
-                  backgroundColor: alteredMental ? 'rgba(34, 197, 94, 0.1)' : undefined,
+                  minHeight: 80,
+                  borderRadius: 12,
+                  border: '2px solid',
+                  borderColor: productType === type ? '#1B2B4B' : '#E5E7EB',
+                  backgroundColor: productType === type ? '#1B2B4B' : '#ffffff',
+                  color: productType === type ? '#ffffff' : '#1B2B4B',
+                  fontSize: 18,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
                 }}
               >
-                <span className="font-semibold">Altered Mental Status</span>
-                <div 
-                  className="flex h-8 w-14 items-center rounded-full p-1 transition-colors"
-                  style={{ backgroundColor: alteredMental ? '#22C55E' : '#E5E7EB' }}
-                >
-                  <div 
-                    className="h-6 w-6 rounded-full bg-white shadow transition-transform"
-                    style={{ transform: alteredMental ? 'translateX(24px)' : 'translateX(0)' }}
-                  />
-                </div>
+                {type}
               </button>
-            </div>
-          </section>
+            ))}
+          </div>
+        </section>
 
-          {/* Cold Chain Toggle */}
-          <section>
+        {/* Unit Count */}
+        <section>
+          <h2 style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', marginBottom: 12 }}>
+            Units
+          </h2>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: 24, 
+            padding: 16, 
+            backgroundColor: '#ffffff', 
+            borderRadius: 12, 
+            border: '1px solid #E5E7EB' 
+          }}>
             <button
-              type="button"
-              onClick={() => setColdChain(!coldChain)}
-              className="flex w-full items-center gap-4 rounded-xl border-2 p-4 transition-all active:scale-[0.99]"
+              onClick={() => setUnitCount(Math.max(1, unitCount - 1))}
+              disabled={unitCount <= 1}
               style={{
-                borderColor: coldChain ? '#1B2B4B' : '#D94F3D',
-                backgroundColor: coldChain ? 'rgba(27, 43, 75, 0.05)' : 'rgba(217, 79, 61, 0.1)',
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                border: '2px solid #E5E7EB',
+                backgroundColor: '#F3F4F6',
+                fontSize: 24,
+                fontWeight: 700,
+                cursor: 'pointer'
               }}
             >
-              <div 
-                className="flex h-12 w-12 items-center justify-center rounded-full"
-                style={{ backgroundColor: coldChain ? 'rgba(27, 43, 75, 0.2)' : 'rgba(217, 79, 61, 0.2)' }}
-              >
-                {coldChain ? (
-                  <Snowflake className="h-6 w-6" style={{ color: '#1B2B4B' }} />
-                ) : (
-                  <AlertTriangle className="h-6 w-6" style={{ color: '#D94F3D' }} />
-                )}
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-semibold">Cold Chain</p>
-                <p className="text-sm" style={{ color: coldChain ? '#6B7280' : '#D94F3D' }}>
-                  {coldChain ? 'Confirmed - product maintained at temp' : 'NOT confirmed - document reason'}
-                </p>
-              </div>
-              <div 
-                className="flex h-8 w-14 items-center rounded-full p-1 transition-colors"
-                style={{ backgroundColor: coldChain ? '#1B2B4B' : '#D94F3D' }}
-              >
-                <div 
-                  className="h-6 w-6 rounded-full bg-white shadow transition-transform"
-                  style={{ transform: coldChain ? 'translateX(24px)' : 'translateX(0)' }}
-                />
-              </div>
+              −
             </button>
-          </section>
+            <span style={{ fontSize: 48, fontWeight: 700, width: 60, textAlign: 'center' }}>{unitCount}</span>
+            <button
+              onClick={() => setUnitCount(Math.min(6, unitCount + 1))}
+              disabled={unitCount >= 6}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                border: '2px solid #1B2B4B',
+                backgroundColor: '#1B2B4B',
+                color: '#ffffff',
+                fontSize: 24,
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              +
+            </button>
+          </div>
+        </section>
 
-        </div>
+        {/* Barcode Scanner */}
+        <section>
+          <h2 style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', marginBottom: 12 }}>
+            Unit ID
+          </h2>
+          <button
+            onClick={() => setScannedBarcode('W' + Math.random().toString().slice(2, 10))}
+            style={{
+              width: '100%',
+              padding: 24,
+              borderRadius: 12,
+              border: '2px dashed',
+              borderColor: scannedBarcode ? '#22C55E' : '#E5E7EB',
+              backgroundColor: scannedBarcode ? 'rgba(34, 197, 94, 0.1)' : '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              cursor: 'pointer'
+            }}
+          >
+            {scannedBarcode ? (
+              <>
+                <span style={{ color: '#22C55E', fontSize: 20 }}>✓</span>
+                <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 600 }}>{scannedBarcode}</span>
+              </>
+            ) : (
+              <span style={{ color: '#6B7280' }}>Tap to scan barcode</span>
+            )}
+          </button>
+        </section>
+
+        {/* Indication */}
+        <section>
+          <h2 style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', marginBottom: 12 }}>
+            Indication
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+            {['Trauma', 'GI Bleed', 'Obstetric', 'Medical/Other'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setIndication(type)}
+                style={{
+                  minHeight: 56,
+                  borderRadius: 12,
+                  border: '2px solid',
+                  borderColor: indication === type ? '#1B2B4B' : '#E5E7EB',
+                  backgroundColor: indication === type ? '#1B2B4B' : '#ffffff',
+                  color: indication === type ? '#ffffff' : '#1B2B4B',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Vitals */}
+        <section>
+          <h2 style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', marginBottom: 12 }}>
+            Vitals
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* SBP */}
+            <div style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontWeight: 600 }}>SBP</span>
+                <span style={{ 
+                  padding: '4px 12px', 
+                  borderRadius: 20, 
+                  fontSize: 12,
+                  fontWeight: 500,
+                  backgroundColor: sbpRange !== null && sbpRange < 90 ? '#22C55E' : '#E5E7EB',
+                  color: sbpRange !== null && sbpRange < 90 ? '#ffffff' : '#374151'
+                }}>
+                  {sbpRange !== null ? (sbpRange < 90 ? 'Met (<90)' : 'Not Met') : '—'}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                {[
+                  { label: '<70', value: 60, met: true },
+                  { label: '70-89', value: 80, met: true },
+                  { label: '90-99', value: 95, met: false },
+                  { label: '100+', value: 110, met: false },
+                ].map((range) => (
+                  <button
+                    key={range.label}
+                    onClick={() => setSbpRange(range.value)}
+                    style={{
+                      padding: '12px 0',
+                      borderRadius: 8,
+                      border: '2px solid',
+                      borderColor: sbpRange === range.value ? (range.met ? '#22C55E' : '#1B2B4B') : '#E5E7EB',
+                      backgroundColor: sbpRange === range.value ? (range.met ? '#22C55E' : '#1B2B4B') : '#ffffff',
+                      color: sbpRange === range.value ? '#ffffff' : '#374151',
+                      fontFamily: 'monospace',
+                      fontSize: 16,
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* HR */}
+            <div style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontWeight: 600 }}>HR</span>
+                <span style={{ 
+                  padding: '4px 12px', 
+                  borderRadius: 20, 
+                  fontSize: 12,
+                  fontWeight: 500,
+                  backgroundColor: hrRange !== null && hrRange > 100 ? '#22C55E' : '#E5E7EB',
+                  color: hrRange !== null && hrRange > 100 ? '#ffffff' : '#374151'
+                }}>
+                  {hrRange !== null ? (hrRange > 100 ? 'Met (>100)' : 'Not Met') : '—'}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                {[
+                  { label: '<80', value: 70, met: false },
+                  { label: '80-99', value: 90, met: false },
+                  { label: '100-119', value: 110, met: true },
+                  { label: '120+', value: 130, met: true },
+                ].map((range) => (
+                  <button
+                    key={range.label}
+                    onClick={() => setHrRange(range.value)}
+                    style={{
+                      padding: '12px 0',
+                      borderRadius: 8,
+                      border: '2px solid',
+                      borderColor: hrRange === range.value ? (range.met ? '#22C55E' : '#1B2B4B') : '#E5E7EB',
+                      backgroundColor: hrRange === range.value ? (range.met ? '#22C55E' : '#1B2B4B') : '#ffffff',
+                      color: hrRange === range.value ? '#ffffff' : '#374151',
+                      fontFamily: 'monospace',
+                      fontSize: 16,
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Altered Mental Status */}
+        <section>
+          <button
+            onClick={() => setAlteredMental(!alteredMental)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: 16,
+              borderRadius: 12,
+              border: '2px solid',
+              borderColor: alteredMental ? '#22C55E' : '#E5E7EB',
+              backgroundColor: alteredMental ? 'rgba(34, 197, 94, 0.1)' : '#ffffff',
+              cursor: 'pointer'
+            }}
+          >
+            <span style={{ fontWeight: 600 }}>Altered Mental Status</span>
+            <div style={{
+              width: 52,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: alteredMental ? '#22C55E' : '#E5E7EB',
+              position: 'relative',
+              transition: 'background-color 0.2s'
+            }}>
+              <div style={{
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                backgroundColor: '#ffffff',
+                position: 'absolute',
+                top: 2,
+                left: alteredMental ? 26 : 2,
+                transition: 'left 0.2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+              }} />
+            </div>
+          </button>
+        </section>
+
+        {/* Cold Chain */}
+        <section>
+          <button
+            onClick={() => setColdChain(!coldChain)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              padding: 16,
+              borderRadius: 12,
+              border: '2px solid',
+              borderColor: coldChain ? '#1B2B4B' : '#D94F3D',
+              backgroundColor: coldChain ? 'rgba(27, 43, 75, 0.05)' : 'rgba(217, 79, 61, 0.1)',
+              cursor: 'pointer'
+            }}
+          >
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              backgroundColor: coldChain ? 'rgba(27, 43, 75, 0.2)' : 'rgba(217, 79, 61, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 24
+            }}>
+              {coldChain ? '❄️' : '⚠️'}
+            </div>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <p style={{ fontWeight: 600, margin: 0 }}>Cold Chain</p>
+              <p style={{ fontSize: 14, color: coldChain ? '#6B7280' : '#D94F3D', margin: 0 }}>
+                {coldChain ? 'Confirmed - product maintained at temp' : 'NOT confirmed - document reason'}
+              </p>
+            </div>
+            <div style={{
+              width: 52,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: coldChain ? '#1B2B4B' : '#D94F3D',
+              position: 'relative'
+            }}>
+              <div style={{
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                backgroundColor: '#ffffff',
+                position: 'absolute',
+                top: 2,
+                left: coldChain ? 26 : 2,
+                transition: 'left 0.2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+              }} />
+            </div>
+          </button>
+        </section>
       </main>
 
-      {/* Fixed Bottom Submit Button */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-white/95 p-4 backdrop-blur">
+      {/* Fixed Submit Button */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: 16,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderTop: '1px solid #E5E7EB'
+      }}>
         <button
-          className="flex h-14 w-full items-center justify-center gap-2 rounded-xl text-lg font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
+          disabled={!canSubmit}
+          onClick={() => alert('Submitted!')}
           style={{
+            width: '100%',
+            height: 56,
+            borderRadius: 12,
+            border: 'none',
             backgroundColor: canSubmit ? '#D94F3D' : '#9CA3AF',
+            color: '#ffffff',
+            fontSize: 18,
+            fontWeight: 600,
+            cursor: canSubmit ? 'pointer' : 'not-allowed',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8
           }}
-          disabled={!canSubmit || submitting}
-          onClick={handleSubmit}
         >
-          {submitting ? (
-            <>
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              Submitting...
-            </>
-          ) : (
-            <>
-              <Send className="h-5 w-5" />
-              Submit Transfusion
-            </>
-          )}
+          Submit Transfusion
         </button>
       </div>
     </div>
