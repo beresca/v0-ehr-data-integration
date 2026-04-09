@@ -113,6 +113,13 @@ export function DashboardContent({ cases, stats, userEmail }: DashboardContentPr
             </div>
 
             <div className="flex items-center gap-3">
+              <Button asChild className="gap-2 bg-destructive hover:bg-destructive/90">
+                <Link href="/document">
+                  <Droplet className="h-4 w-4" />
+                  Quick Document
+                </Link>
+              </Button>
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2">
