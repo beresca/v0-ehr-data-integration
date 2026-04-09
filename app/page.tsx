@@ -1,10 +1,5 @@
-import { AppShell } from '@/components/layout/app-shell'
-import { FieldDocumentation } from '@/components/screens/field-documentation'
+import { MedicQuickDoc } from '@/components/screens/medic-quick-doc'
 
 export default function HomePage() {
-  return (
-    <AppShell>
-      <FieldDocumentation />
-    </AppShell>
-  )
+  return <MedicQuickDoc />
 }
