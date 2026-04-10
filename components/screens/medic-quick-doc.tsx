@@ -1,8 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export function MedicQuickDoc() {
+  // Incident linkage
+  const [incidentNumber, setIncidentNumber] = useState<string | null>(null)
+  const [showIncidentInput, setShowIncidentInput] = useState(false)
+  const [incidentInput, setIncidentInput] = useState('')
+  
   // Patient info
   const [ageGroup, setAgeGroup] = useState<string | null>(null)
   const [gender, setGender] = useState<string | null>(null)
@@ -21,8 +28,7 @@ export function MedicQuickDoc() {
   // Confirmations
   const [coldChain, setColdChain] = useState(true)
 
-  // Auto-captured encounter info
-  const timestamp = new Date().toLocaleString()
+  const pathname = usePathname()
 
   // Calculate shock index
   const shockIndex = sbpRange && hrRange ? (hrRange / sbpRange).toFixed(1) : null
@@ -35,7 +41,7 @@ export function MedicQuickDoc() {
   if (shockIndexMet) criteriaMet++
   if (alteredMental) criteriaMet++
 
-  const canSubmit = productType !== null && indication !== null && ageGroup !== null && gender !== null
+  const canSubmit = incidentNumber !== null && productType !== null && indication !== null && ageGroup !== null && gender !== null
 
   // Styles
   const sectionTitle: React.CSSProperties = { 
@@ -56,6 +62,143 @@ export function MedicQuickDoc() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      {/* Incident Banner - Critical linkage to ePCR */}
+      <div style={{
+        backgroundColor: incidentNumber ? '#1B2B4B' : '#D94F3D',
+        color: '#ffffff',
+        padding: '8px 16px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        {incidentNumber ? (
+          <>
+            <div>
+              <div style={{ fontSize: 10, opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Incident</div>
+              <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'monospace' }}>{incidentNumber}</div>
+            </div>
+            <button
+              onClick={() => { setShowIncidentInput(true); setIncidentInput(incidentNumber) }}
+              style={{ 
+                backgroundColor: 'rgba(255,255,255,0.2)', 
+                border: 'none', 
+                borderRadius: 6, 
+                padding: '6px 12px',
+                color: '#fff',
+                fontSize: 13,
+                cursor: 'pointer'
+              }}
+            >
+              Change
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setShowIncidentInput(true)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: '#fff',
+              fontSize: 15,
+              fontWeight: 600,
+              padding: '4px 0',
+              cursor: 'pointer'
+            }}
+          >
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            Tap to enter Incident Number
+          </button>
+        )}
+      </div>
+
+      {/* Incident Number Input Modal */}
+      {showIncidentInput && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: 16
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: 20,
+            width: '100%',
+            maxWidth: 320
+          }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>Enter Incident Number</h3>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6B7280' }}>
+              This links the transfusion to your ePCR record
+            </p>
+            <input
+              type="text"
+              value={incidentInput}
+              onChange={(e) => setIncidentInput(e.target.value.toUpperCase())}
+              placeholder="e.g. 2024-123456"
+              autoFocus
+              style={{
+                width: '100%',
+                padding: 12,
+                fontSize: 18,
+                fontFamily: 'monospace',
+                fontWeight: 600,
+                border: '2px solid #E5E7EB',
+                borderRadius: 8,
+                textAlign: 'center',
+                marginBottom: 16,
+                boxSizing: 'border-box'
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setShowIncidentInput(false)}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 8,
+                  border: '1px solid #E5E7EB',
+                  backgroundColor: '#fff',
+                  fontSize: 15,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (incidentInput.trim()) {
+                    setIncidentNumber(incidentInput.trim())
+                  }
+                  setShowIncidentInput(false)
+                }}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 8,
+                  border: 'none',
+                  backgroundColor: '#1B2B4B',
+                  color: '#fff',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header style={{ 
         position: 'sticky', 
@@ -63,12 +206,10 @@ export function MedicQuickDoc() {
         zIndex: 50, 
         backgroundColor: '#1B2B4B', 
         color: '#ffffff',
-        padding: '12px 16px'
+        padding: '10px 16px'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 18, fontWeight: 700 }}>BloodTrack</span>
-          </div>
+          <span style={{ fontSize: 16, fontWeight: 700 }}>BloodTrack</span>
           <div style={{ display: 'flex', gap: 8 }}>
             {shockIndex && (
               <span style={{ 
@@ -483,7 +624,7 @@ export function MedicQuickDoc() {
       {/* Fixed Submit Button */}
       <div style={{
         position: 'fixed',
-        bottom: 0,
+        bottom: 56,
         left: 0,
         right: 0,
         padding: 12,
@@ -492,7 +633,7 @@ export function MedicQuickDoc() {
       }}>
         <button
           disabled={!canSubmit}
-          onClick={() => alert('Transfusion documented!\n\nThis would export to NEMSIS XML for ePCR integration.')}
+          onClick={() => alert('Transfusion documented!\n\nIncident: ' + incidentNumber + '\n\nThis would export to NEMSIS XML for ePCR integration.')}
           style={{
             width: '100%',
             height: 52,
@@ -508,6 +649,45 @@ export function MedicQuickDoc() {
           Submit Transfusion
         </button>
       </div>
+
+      {/* Bottom Navigation */}
+      <nav style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 56,
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #E5E7EB',
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center'
+      }}>
+        {[
+          { href: '/', label: 'Document', icon: '📋', active: pathname === '/' },
+          { href: '/outcomes', label: 'Outcomes', icon: '📊', active: pathname === '/outcomes' },
+          { href: '/dashboard', label: 'Dashboard', icon: '📈', active: pathname === '/dashboard' },
+          { href: '/registry', label: 'Registry', icon: '📁', active: pathname === '/registry' },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 2,
+              textDecoration: 'none',
+              color: item.active ? '#1B2B4B' : '#9CA3AF',
+              fontSize: 10,
+              fontWeight: item.active ? 600 : 400
+            }}
+          >
+            <span style={{ fontSize: 20 }}>{item.icon}</span>
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   )
 }
