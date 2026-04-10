@@ -4,31 +4,45 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+// Mock data - would come from ePCR API
+const MOCK_INCIDENTS = [
+  { id: 'INC-2024-78432', timestamp: '14:32', status: 'active', chief: 'MVC - Trauma', unit: 'M-41' },
+  { id: 'INC-2024-78429', timestamp: '13:45', status: 'active', chief: 'Fall - Head Injury', unit: 'M-41' },
+  { id: 'INC-2024-78415', timestamp: '11:20', status: 'completed', chief: 'GSW - Chest', unit: 'M-41' },
+  { id: 'INC-2024-78401', timestamp: '09:15', status: 'completed', chief: 'Stab Wound', unit: 'M-22' },
+]
+
+// Mock data - would come from Delta BloodComm API
+const MOCK_BLOOD_PRODUCTS = [
+  { unitId: 'W24-089234', productType: 'LTOWB', expiry: '2024-12-15', temp: '4.2°C', status: 'available' },
+  { unitId: 'W24-089235', productType: 'LTOWB', expiry: '2024-12-15', temp: '4.1°C', status: 'available' },
+  { unitId: 'R24-445521', productType: 'pRBC', expiry: '2024-12-20', temp: '4.0°C', status: 'available' },
+  { unitId: 'P24-112233', productType: 'Plasma', expiry: '2024-12-18', temp: '-18°C', status: 'available' },
+]
+
+type Incident = typeof MOCK_INCIDENTS[0]
+type BloodProduct = typeof MOCK_BLOOD_PRODUCTS[0]
+
 export function MedicQuickDoc() {
-  // Incident linkage
-  const [incidentNumber, setIncidentNumber] = useState<string | null>(null)
-  const [showIncidentInput, setShowIncidentInput] = useState(false)
-  const [incidentInput, setIncidentInput] = useState('')
+  const pathname = usePathname()
   
-  // Patient info
-  const [ageGroup, setAgeGroup] = useState<string | null>(null)
-  const [gender, setGender] = useState<string | null>(null)
+  // Step 1: Select incident (from ePCR API)
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
+  const [showIncidentList, setShowIncidentList] = useState(true)
   
-  // Transfusion info
-  const [productType, setProductType] = useState<string | null>(null)
-  const [unitCount, setUnitCount] = useState(1)
+  // Step 2: Select/confirm blood products (from Delta BloodComm)
+  const [selectedProducts, setSelectedProducts] = useState<BloodProduct[]>([])
+  const [showProductList, setShowProductList] = useState(false)
+  
+  // Step 3: Additional documentation
   const [indication, setIndication] = useState<string | null>(null)
-  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null)
-  
-  // Vitals
   const [sbpRange, setSbpRange] = useState<number | null>(null)
   const [hrRange, setHrRange] = useState<number | null>(null)
   const [alteredMental, setAlteredMental] = useState(false)
-  
-  // Confirmations
-  const [coldChain, setColdChain] = useState(true)
+  const [coldChainConfirmed, setColdChainConfirmed] = useState(true)
 
-  const pathname = usePathname()
+  // Demographics come FROM the ePCR via incident linkage
+  const patientDemo = selectedIncident ? { ageGroup: 'Adult', gender: 'M' } : null // Would be fetched
 
   // Calculate shock index
   const shockIndex = sbpRange && hrRange ? (hrRange / sbpRange).toFixed(1) : null
@@ -41,9 +55,23 @@ export function MedicQuickDoc() {
   if (shockIndexMet) criteriaMet++
   if (alteredMental) criteriaMet++
 
-  const canSubmit = incidentNumber !== null && productType !== null && indication !== null && ageGroup !== null && gender !== null
+  const canSubmit = selectedIncident && selectedProducts.length > 0 && indication
+
+  const toggleProduct = (product: BloodProduct) => {
+    setSelectedProducts(prev => 
+      prev.find(p => p.unitId === product.unitId)
+        ? prev.filter(p => p.unitId !== product.unitId)
+        : [...prev, product]
+    )
+  }
 
   // Styles
+  const card: React.CSSProperties = {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    border: '1px solid #E5E7EB'
+  }
+
   const sectionTitle: React.CSSProperties = { 
     fontSize: 11, 
     fontWeight: 600, 
@@ -54,169 +82,253 @@ export function MedicQuickDoc() {
     marginTop: 0
   }
 
-  const card: React.CSSProperties = {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    border: '1px solid #E5E7EB'
-  }
+  // If no incident selected, show incident selection screen
+  if (showIncidentList && !selectedIncident) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+        {/* Header */}
+        <header style={{ backgroundColor: '#1B2B4B', color: '#fff', padding: '16px', textAlign: 'center' }}>
+          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>BloodTrack</h1>
+          <p style={{ margin: '4px 0 0', fontSize: 13, opacity: 0.8 }}>Select Incident to Document Transfusion</p>
+        </header>
 
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-      {/* Incident Banner - Critical linkage to ePCR */}
-      <div style={{
-        backgroundColor: incidentNumber ? '#1B2B4B' : '#D94F3D',
-        color: '#ffffff',
-        padding: '8px 16px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        {incidentNumber ? (
-          <>
-            <div>
-              <div style={{ fontSize: 10, opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Incident</div>
-              <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'monospace' }}>{incidentNumber}</div>
-            </div>
+        {/* Mode Toggle */}
+        <div style={{ display: 'flex', margin: 12, backgroundColor: '#E5E7EB', borderRadius: 8, padding: 4 }}>
+          <button style={{ flex: 1, padding: '10px', borderRadius: 6, border: 'none', backgroundColor: '#fff', fontWeight: 600, fontSize: 14 }}>
+            Active Incidents
+          </button>
+          <button style={{ flex: 1, padding: '10px', borderRadius: 6, border: 'none', backgroundColor: 'transparent', color: '#6B7280', fontSize: 14 }}>
+            Recent (24h)
+          </button>
+        </div>
+
+        {/* Incident List */}
+        <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {MOCK_INCIDENTS.map((incident) => (
             <button
-              onClick={() => { setShowIncidentInput(true); setIncidentInput(incidentNumber) }}
-              style={{ 
-                backgroundColor: 'rgba(255,255,255,0.2)', 
-                border: 'none', 
-                borderRadius: 6, 
-                padding: '6px 12px',
-                color: '#fff',
-                fontSize: 13,
-                cursor: 'pointer'
+              key={incident.id}
+              onClick={() => {
+                setSelectedIncident(incident)
+                setShowIncidentList(false)
+                setShowProductList(true)
+              }}
+              style={{
+                ...card,
+                padding: 16,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left'
               }}
             >
-              Change
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15 }}>{incident.id}</span>
+                  <span style={{
+                    fontSize: 10,
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    backgroundColor: incident.status === 'active' ? '#22C55E' : '#E5E7EB',
+                    color: incident.status === 'active' ? '#fff' : '#6B7280',
+                    textTransform: 'uppercase',
+                    fontWeight: 600
+                  }}>
+                    {incident.status}
+                  </span>
+                </div>
+                <div style={{ fontSize: 14, color: '#374151' }}>{incident.chief}</div>
+                <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
+                  {incident.unit} • {incident.timestamp}
+                </div>
+              </div>
+              <span style={{ fontSize: 24, color: '#D1D5DB' }}>›</span>
             </button>
-          </>
-        ) : (
+          ))}
+        </div>
+
+        {/* Manual Entry Option */}
+        <div style={{ padding: 12 }}>
           <button
-            onClick={() => setShowIncidentInput(true)}
+            onClick={() => {
+              const id = prompt('Enter Incident Number:')
+              if (id) {
+                setSelectedIncident({ id, timestamp: 'now', status: 'manual', chief: 'Manual Entry', unit: '-' })
+                setShowIncidentList(false)
+                setShowProductList(true)
+              }
+            }}
             style={{
               width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
+              padding: 14,
+              borderRadius: 8,
+              border: '2px dashed #D1D5DB',
               backgroundColor: 'transparent',
-              border: 'none',
-              color: '#fff',
-              fontSize: 15,
-              fontWeight: 600,
-              padding: '4px 0',
+              color: '#6B7280',
+              fontSize: 14,
               cursor: 'pointer'
             }}
           >
-            <span style={{ fontSize: 18 }}>⚠️</span>
-            Tap to enter Incident Number
+            + Enter Incident Number Manually
           </button>
-        )}
-      </div>
+        </div>
 
-      {/* Incident Number Input Modal */}
-      {showIncidentInput && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 100,
-          padding: 16
-        }}>
-          <div style={{
-            backgroundColor: '#fff',
-            borderRadius: 12,
-            padding: 20,
-            width: '100%',
-            maxWidth: 320
-          }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>Enter Incident Number</h3>
-            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6B7280' }}>
-              This links the transfusion to your ePCR record
-            </p>
-            <input
-              type="text"
-              value={incidentInput}
-              onChange={(e) => setIncidentInput(e.target.value.toUpperCase())}
-              placeholder="e.g. 2024-123456"
-              autoFocus
-              style={{
-                width: '100%',
-                padding: 12,
-                fontSize: 18,
-                fontFamily: 'monospace',
-                fontWeight: 600,
-                border: '2px solid #E5E7EB',
-                borderRadius: 8,
-                textAlign: 'center',
-                marginBottom: 16,
-                boxSizing: 'border-box'
-              }}
-            />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setShowIncidentInput(false)}
-                style={{
-                  flex: 1,
-                  padding: 12,
-                  borderRadius: 8,
-                  border: '1px solid #E5E7EB',
-                  backgroundColor: '#fff',
-                  fontSize: 15,
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (incidentInput.trim()) {
-                    setIncidentNumber(incidentInput.trim())
-                  }
-                  setShowIncidentInput(false)
-                }}
-                style={{
-                  flex: 1,
-                  padding: 12,
-                  borderRadius: 8,
-                  border: 'none',
-                  backgroundColor: '#1B2B4B',
-                  color: '#fff',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                Confirm
-              </button>
+        {/* Bottom Nav */}
+        <BottomNav pathname={pathname} />
+      </div>
+    )
+  }
+
+  // If incident selected but need to select blood products
+  if (showProductList) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+        {/* Incident Banner */}
+        <div style={{ backgroundColor: '#1B2B4B', color: '#fff', padding: '12px 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 10, opacity: 0.7, textTransform: 'uppercase' }}>Incident</div>
+              <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 16 }}>{selectedIncident?.id}</div>
             </div>
+            <button 
+              onClick={() => { setSelectedIncident(null); setShowIncidentList(true); setShowProductList(false) }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, padding: '6px 12px', color: '#fff', fontSize: 12, cursor: 'pointer' }}
+            >
+              Change
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Header */}
-      <header style={{ 
-        position: 'sticky', 
-        top: 0, 
-        zIndex: 50, 
-        backgroundColor: '#1B2B4B', 
-        color: '#ffffff',
-        padding: '10px 16px'
-      }}>
+        {/* Header */}
+        <header style={{ backgroundColor: '#1B2B4B', color: '#fff', padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <h1 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Select Blood Products</h1>
+          <p style={{ margin: '2px 0 0', fontSize: 12, opacity: 0.7 }}>From Delta BloodComm cooler</p>
+        </header>
+
+        {/* Product List */}
+        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {MOCK_BLOOD_PRODUCTS.map((product) => {
+            const isSelected = selectedProducts.some(p => p.unitId === product.unitId)
+            return (
+              <button
+                key={product.unitId}
+                onClick={() => toggleProduct(product)}
+                style={{
+                  ...card,
+                  padding: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  border: isSelected ? '2px solid #22C55E' : '1px solid #E5E7EB',
+                  backgroundColor: isSelected ? 'rgba(34, 197, 94, 0.05)' : '#fff',
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                {/* Checkbox */}
+                <div style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  border: isSelected ? 'none' : '2px solid #D1D5DB',
+                  backgroundColor: isSelected ? '#22C55E' : '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontSize: 16,
+                  fontWeight: 700
+                }}>
+                  {isSelected && '✓'}
+                </div>
+                
+                {/* Product Info */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15 }}>{product.unitId}</span>
+                    <span style={{
+                      fontSize: 11,
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      backgroundColor: product.productType === 'LTOWB' ? '#DC2626' : product.productType === 'pRBC' ? '#B91C1C' : '#1B2B4B',
+                      color: '#fff',
+                      fontWeight: 600
+                    }}>
+                      {product.productType}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+                    Exp: {product.expiry} • Temp: {product.temp}
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Scan Additional */}
+        <div style={{ padding: '0 12px' }}>
+          <button
+            onClick={() => alert('Camera would open to scan barcode')}
+            style={{
+              width: '100%',
+              padding: 14,
+              borderRadius: 8,
+              border: '2px dashed #D1D5DB',
+              backgroundColor: 'transparent',
+              color: '#6B7280',
+              fontSize: 14,
+              cursor: 'pointer'
+            }}
+          >
+            + Scan Additional Unit Barcode
+          </button>
+        </div>
+
+        {/* Continue Button */}
+        <div style={{ position: 'fixed', bottom: 56, left: 0, right: 0, padding: 12, backgroundColor: 'rgba(255,255,255,0.98)', borderTop: '1px solid #E5E7EB' }}>
+          <button
+            disabled={selectedProducts.length === 0}
+            onClick={() => setShowProductList(false)}
+            style={{
+              width: '100%',
+              height: 52,
+              borderRadius: 10,
+              border: 'none',
+              backgroundColor: selectedProducts.length > 0 ? '#1B2B4B' : '#D1D5DB',
+              color: '#fff',
+              fontSize: 16,
+              fontWeight: 700,
+              cursor: selectedProducts.length > 0 ? 'pointer' : 'not-allowed'
+            }}
+          >
+            Continue with {selectedProducts.length} Unit{selectedProducts.length !== 1 ? 's' : ''}
+          </button>
+        </div>
+
+        <BottomNav pathname={pathname} />
+      </div>
+    )
+  }
+
+  // Main documentation screen (after incident and products selected)
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+      {/* Incident Banner */}
+      <div style={{ backgroundColor: '#1B2B4B', color: '#fff', padding: '10px 16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 16, fontWeight: 700 }}>BloodTrack</span>
+          <div>
+            <div style={{ fontSize: 10, opacity: 0.7, textTransform: 'uppercase' }}>Incident</div>
+            <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 16 }}>{selectedIncident?.id}</div>
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {shockIndex && (
               <span style={{ 
                 backgroundColor: shockIndexMet ? '#D94F3D' : 'rgba(255,255,255,0.2)',
                 padding: '4px 10px',
                 borderRadius: 12,
-                fontSize: 13,
+                fontSize: 12,
                 fontFamily: 'monospace'
               }}>
                 SI: {shockIndex}
@@ -226,187 +338,42 @@ export function MedicQuickDoc() {
               backgroundColor: criteriaMet >= 2 ? '#22C55E' : 'rgba(255,255,255,0.2)',
               padding: '4px 10px',
               borderRadius: 12,
-              fontSize: 13
+              fontSize: 12
             }}>
               {criteriaMet}/4
             </span>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
-      <main style={{ padding: 12, paddingBottom: 100, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <main style={{ padding: 12, paddingBottom: 130, display: 'flex', flexDirection: 'column', gap: 12 }}>
         
-        {/* Patient Section */}
+        {/* Selected Products Summary */}
         <section style={{ ...card, padding: 12 }}>
-          <h2 style={sectionTitle}>Patient</h2>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {/* Age Group */}
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-                {['Adult', 'Peds', 'Infant'].map((age) => (
-                  <button
-                    key={age}
-                    onClick={() => setAgeGroup(age)}
-                    style={{
-                      height: 44,
-                      borderRadius: 8,
-                      border: '2px solid',
-                      borderColor: ageGroup === age ? '#1B2B4B' : '#E5E7EB',
-                      backgroundColor: ageGroup === age ? '#1B2B4B' : '#ffffff',
-                      color: ageGroup === age ? '#ffffff' : '#374151',
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {age}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* Gender */}
-            <div style={{ display: 'flex', gap: 6 }}>
-              {['M', 'F'].map((g) => (
-                <button
-                  key={g}
-                  onClick={() => setGender(g)}
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 8,
-                    border: '2px solid',
-                    borderColor: gender === g ? (g === 'F' ? '#EC4899' : '#3B82F6') : '#E5E7EB',
-                    backgroundColor: gender === g ? (g === 'F' ? '#EC4899' : '#3B82F6') : '#ffffff',
-                    color: gender === g ? '#ffffff' : '#374151',
-                    fontSize: 16,
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <h2 style={sectionTitle}>Blood Products ({selectedProducts.length})</h2>
+            <button 
+              onClick={() => setShowProductList(true)}
+              style={{ fontSize: 12, color: '#1B2B4B', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Edit
+            </button>
           </div>
-          {/* Rh warning for females */}
-          {gender === 'F' && (
-            <div style={{ 
-              marginTop: 8, 
-              padding: '8px 12px', 
-              backgroundColor: '#FEF3C7', 
-              borderRadius: 8,
-              fontSize: 13,
-              color: '#92400E',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}>
-              <span>⚠️</span>
-              <span>Female patient - Rh status follow-up required</span>
-            </div>
-          )}
-        </section>
-
-        {/* Product Type - Large buttons */}
-        <section style={{ ...card, padding: 12 }}>
-          <h2 style={sectionTitle}>Blood Product</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-            {[
-              { id: 'LTOWB', label: 'LTOWB', desc: 'Whole Blood' },
-              { id: 'pRBC', label: 'pRBCs', desc: 'Red Cells' },
-              { id: 'Plasma', label: 'Plasma', desc: 'FFP/Liquid' },
-              { id: 'Platelets', label: 'Platelets', desc: 'PLT' }
-            ].map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setProductType(p.id)}
-                style={{
-                  height: 64,
-                  borderRadius: 10,
-                  border: '2px solid',
-                  borderColor: productType === p.id ? '#1B2B4B' : '#E5E7EB',
-                  backgroundColor: productType === p.id ? '#1B2B4B' : '#ffffff',
-                  color: productType === p.id ? '#ffffff' : '#1B2B4B',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}
-              >
-                <span style={{ fontSize: 16, fontWeight: 700 }}>{p.label}</span>
-                <span style={{ fontSize: 11, opacity: 0.7 }}>{p.desc}</span>
-              </button>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {selectedProducts.map(p => (
+              <span key={p.unitId} style={{
+                padding: '6px 10px',
+                borderRadius: 6,
+                backgroundColor: '#F3F4F6',
+                fontFamily: 'monospace',
+                fontSize: 12,
+                fontWeight: 600
+              }}>
+                {p.productType}: {p.unitId}
+              </span>
             ))}
           </div>
-          
-          {/* Unit Count */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 12 }}>
-            <button
-              onClick={() => setUnitCount(Math.max(1, unitCount - 1))}
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                border: '2px solid #E5E7EB',
-                backgroundColor: '#F3F4F6',
-                fontSize: 20,
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              −
-            </button>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>{unitCount}</div>
-              <div style={{ fontSize: 11, color: '#6B7280' }}>units</div>
-            </div>
-            <button
-              onClick={() => setUnitCount(Math.min(6, unitCount + 1))}
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                border: '2px solid #1B2B4B',
-                backgroundColor: '#1B2B4B',
-                color: '#ffffff',
-                fontSize: 20,
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              +
-            </button>
-          </div>
-
-          {/* Barcode */}
-          <button
-            onClick={() => setScannedBarcode('W' + Math.random().toString().slice(2, 10))}
-            style={{
-              width: '100%',
-              marginTop: 12,
-              padding: 12,
-              borderRadius: 8,
-              border: '2px dashed',
-              borderColor: scannedBarcode ? '#22C55E' : '#D1D5DB',
-              backgroundColor: scannedBarcode ? 'rgba(34, 197, 94, 0.1)' : '#F9FAFB',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              cursor: 'pointer'
-            }}
-          >
-            {scannedBarcode ? (
-              <>
-                <span style={{ color: '#22C55E' }}>✓</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{scannedBarcode}</span>
-              </>
-            ) : (
-              <span style={{ color: '#9CA3AF', fontSize: 14 }}>Tap to scan unit barcode</span>
-            )}
-          </button>
         </section>
 
         {/* Indication */}
@@ -422,8 +389,8 @@ export function MedicQuickDoc() {
                   borderRadius: 8,
                   border: '2px solid',
                   borderColor: indication === ind ? '#1B2B4B' : '#E5E7EB',
-                  backgroundColor: indication === ind ? '#1B2B4B' : '#ffffff',
-                  color: indication === ind ? '#ffffff' : '#374151',
+                  backgroundColor: indication === ind ? '#1B2B4B' : '#fff',
+                  color: indication === ind ? '#fff' : '#374151',
                   fontSize: 15,
                   fontWeight: 600,
                   cursor: 'pointer'
@@ -450,7 +417,7 @@ export function MedicQuickDoc() {
                 backgroundColor: sbpRange !== null && sbpRange < 90 ? '#22C55E' : '#F3F4F6',
                 color: sbpRange !== null && sbpRange < 90 ? '#fff' : '#6B7280'
               }}>
-                {sbpRange !== null ? (sbpRange < 90 ? 'CRITERIA MET' : 'Not Met') : '—'}
+                {sbpRange !== null ? (sbpRange < 90 ? 'MET' : 'Not Met') : '—'}
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
@@ -493,7 +460,7 @@ export function MedicQuickDoc() {
                 backgroundColor: hrRange !== null && hrRange > 100 ? '#22C55E' : '#F3F4F6',
                 color: hrRange !== null && hrRange > 100 ? '#fff' : '#6B7280'
               }}>
-                {hrRange !== null ? (hrRange > 100 ? 'CRITERIA MET' : 'Not Met') : '—'}
+                {hrRange !== null ? (hrRange > 100 ? 'MET' : 'Not Met') : '—'}
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
@@ -543,78 +510,81 @@ export function MedicQuickDoc() {
           >
             <span style={{ fontSize: 14, fontWeight: 600 }}>Altered Mental Status</span>
             <div style={{
-              width: 44,
-              height: 24,
-              borderRadius: 12,
+              width: 48,
+              height: 26,
+              borderRadius: 13,
               backgroundColor: alteredMental ? '#22C55E' : '#D1D5DB',
-              position: 'relative'
+              position: 'relative',
+              transition: 'background-color 0.2s'
             }}>
               <div style={{
-                width: 20,
-                height: 20,
+                width: 22,
+                height: 22,
                 borderRadius: '50%',
                 backgroundColor: '#fff',
                 position: 'absolute',
                 top: 2,
-                left: alteredMental ? 22 : 2,
-                transition: 'left 0.15s',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                left: alteredMental ? 24 : 2,
+                transition: 'left 0.2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
               }} />
             </div>
           </button>
         </section>
 
-        {/* Cold Chain Confirmation */}
-        <section>
+        {/* Cold Chain */}
+        <section style={{ ...card, padding: 12 }}>
           <button
-            onClick={() => setColdChain(!coldChain)}
+            onClick={() => setColdChainConfirmed(!coldChainConfirmed)}
             style={{
               width: '100%',
               display: 'flex',
               alignItems: 'center',
               gap: 12,
-              padding: 12,
-              borderRadius: 12,
-              border: '2px solid',
-              borderColor: coldChain ? '#1B2B4B' : '#D94F3D',
-              backgroundColor: coldChain ? 'rgba(27, 43, 75, 0.05)' : 'rgba(217, 79, 61, 0.1)',
-              cursor: 'pointer'
+              padding: 0,
+              border: 'none',
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              textAlign: 'left'
             }}
           >
             <div style={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              backgroundColor: coldChain ? 'rgba(27, 43, 75, 0.15)' : 'rgba(217, 79, 61, 0.15)',
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              backgroundColor: coldChainConfirmed ? 'rgba(27, 43, 75, 0.1)' : 'rgba(217, 79, 61, 0.1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 20
             }}>
-              {coldChain ? '❄️' : '⚠️'}
+              {coldChainConfirmed ? '❄️' : '⚠️'}
             </div>
-            <div style={{ flex: 1, textAlign: 'left' }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>Cold Chain</div>
-              <div style={{ fontSize: 12, color: coldChain ? '#6B7280' : '#D94F3D' }}>
-                {coldChain ? 'Confirmed' : 'NOT confirmed'}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: coldChainConfirmed ? '#1B2B4B' : '#D94F3D' }}>
+                Cold Chain {coldChainConfirmed ? 'Confirmed' : 'NOT Confirmed'}
+              </div>
+              <div style={{ fontSize: 12, color: '#6B7280' }}>
+                {coldChainConfirmed ? 'Product maintained at temperature' : 'Tap to confirm or document issue'}
               </div>
             </div>
             <div style={{
-              width: 44,
-              height: 24,
-              borderRadius: 12,
-              backgroundColor: coldChain ? '#1B2B4B' : '#D94F3D',
+              width: 48,
+              height: 26,
+              borderRadius: 13,
+              backgroundColor: coldChainConfirmed ? '#1B2B4B' : '#D94F3D',
               position: 'relative'
             }}>
               <div style={{
-                width: 20,
-                height: 20,
+                width: 22,
+                height: 22,
                 borderRadius: '50%',
                 backgroundColor: '#fff',
                 position: 'absolute',
                 top: 2,
-                left: coldChain ? 22 : 2,
-                transition: 'left 0.15s'
+                left: coldChainConfirmed ? 24 : 2,
+                transition: 'left 0.2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
               }} />
             </div>
           </button>
@@ -633,14 +603,14 @@ export function MedicQuickDoc() {
       }}>
         <button
           disabled={!canSubmit}
-          onClick={() => alert('Transfusion documented!\n\nIncident: ' + incidentNumber + '\n\nThis would export to NEMSIS XML for ePCR integration.')}
+          onClick={() => alert(`Transfusion Documented!\n\nIncident: ${selectedIncident?.id}\nProducts: ${selectedProducts.map(p => p.unitId).join(', ')}\nIndication: ${indication}\n\nThis would export to NEMSIS XML.`)}
           style={{
             width: '100%',
             height: 52,
             borderRadius: 10,
             border: 'none',
             backgroundColor: canSubmit ? '#D94F3D' : '#D1D5DB',
-            color: '#ffffff',
+            color: '#fff',
             fontSize: 17,
             fontWeight: 700,
             cursor: canSubmit ? 'pointer' : 'not-allowed'
@@ -650,44 +620,50 @@ export function MedicQuickDoc() {
         </button>
       </div>
 
-      {/* Bottom Navigation */}
-      <nav style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 56,
-        backgroundColor: '#ffffff',
-        borderTop: '1px solid #E5E7EB',
-        display: 'flex',
-        justifyContent: 'space-around',
-        alignItems: 'center'
-      }}>
-        {[
-          { href: '/', label: 'Document', icon: '📋', active: pathname === '/' },
-          { href: '/outcomes', label: 'Outcomes', icon: '📊', active: pathname === '/outcomes' },
-          { href: '/dashboard', label: 'Dashboard', icon: '📈', active: pathname === '/dashboard' },
-          { href: '/registry', label: 'Registry', icon: '📁', active: pathname === '/registry' },
-        ].map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 2,
-              textDecoration: 'none',
-              color: item.active ? '#1B2B4B' : '#9CA3AF',
-              fontSize: 10,
-              fontWeight: item.active ? 600 : 400
-            }}
-          >
-            <span style={{ fontSize: 20 }}>{item.icon}</span>
-            <span>{item.label}</span>
-          </Link>
-        ))}
-      </nav>
+      <BottomNav pathname={pathname} />
     </div>
+  )
+}
+
+// Bottom Navigation Component
+function BottomNav({ pathname }: { pathname: string }) {
+  return (
+    <nav style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 56,
+      backgroundColor: '#ffffff',
+      borderTop: '1px solid #E5E7EB',
+      display: 'flex',
+      justifyContent: 'space-around',
+      alignItems: 'center'
+    }}>
+      {[
+        { href: '/', label: 'Document', icon: '📋', active: pathname === '/' },
+        { href: '/outcomes', label: 'Outcomes', icon: '📊', active: pathname === '/outcomes' },
+        { href: '/dashboard', label: 'Dashboard', icon: '📈', active: pathname === '/dashboard' },
+        { href: '/registry', label: 'Registry', icon: '📁', active: pathname === '/registry' },
+      ].map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            textDecoration: 'none',
+            color: item.active ? '#1B2B4B' : '#9CA3AF',
+            fontSize: 10,
+            fontWeight: item.active ? 600 : 400
+          }}
+        >
+          <span style={{ fontSize: 20 }}>{item.icon}</span>
+          <span>{item.label}</span>
+        </Link>
+      ))}
+    </nav>
   )
 }
