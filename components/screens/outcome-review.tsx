@@ -38,23 +38,23 @@ import {
   Sparkles,
   AlertTriangle,
   AlertCircle,
-  Pencil,
   Check,
-  X,
   ChevronsDown,
+  Info,
 } from 'lucide-react'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type AbnormalStatus = 'normal' | 'low' | 'high' | 'critical-low' | 'critical-high'
 
 interface LabRow {
   key: string
+  panel: string
   test: string
-  ehrValue: string | null     // value pulled from EHR
-  manualValue: string | null  // value entered manually
-  accepted: boolean           // user has accepted EHR value
-  overridden: boolean         // user overrode with manual
+  ehrValue: string | null
+  ehrTimestamp: string | null
+  editedValue: string | null   // user-modified value; original EHR preserved for audit
+  accepted: boolean
   unit: string
   refRange: string
   criticalLow?: number
@@ -65,7 +65,7 @@ interface LabRow {
   requiresManual?: boolean
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseNumeric(val: string | null): number | null {
   if (!val) return null
@@ -73,9 +73,9 @@ function parseNumeric(val: string | null): number | null {
   return isNaN(n) ? null : n
 }
 
-function getAbnormalStatus(lab: LabRow): AbnormalStatus {
+function getStatus(lab: LabRow): AbnormalStatus {
   if (lab.isCategorical) return 'normal'
-  const displayVal = lab.overridden ? lab.manualValue : lab.ehrValue
+  const displayVal = lab.editedValue ?? lab.ehrValue
   const n = parseNumeric(displayVal)
   if (n === null) return 'normal'
   if (lab.criticalLow !== undefined && n <= lab.criticalLow) return 'critical-low'
@@ -85,319 +85,232 @@ function getAbnormalStatus(lab: LabRow): AbnormalStatus {
   return 'normal'
 }
 
-function statusConfig(status: AbnormalStatus) {
+// Row background only — no badges in result column
+function rowBg(status: AbnormalStatus, accepted: boolean): string {
+  if (accepted) return ''
   switch (status) {
     case 'critical-low':
-    case 'critical-high':
-      return {
-        bg: 'bg-red-50',
-        text: 'text-red-700',
-        border: 'border-red-300',
-        badge: 'bg-red-100 text-red-700 border-red-300',
-        icon: <AlertCircle className="h-3.5 w-3.5 text-red-600" />,
-        label: status === 'critical-low' ? 'Critical Low' : 'Critical High',
-      }
-    case 'low':
-    case 'high':
-      return {
-        bg: 'bg-amber-50',
-        text: 'text-amber-700',
-        border: 'border-amber-300',
-        badge: 'bg-amber-100 text-amber-700 border-amber-300',
-        icon: <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />,
-        label: status === 'low' ? 'Low' : 'High',
-      }
-    default:
-      return {
-        bg: '',
-        text: '',
-        border: '',
-        badge: '',
-        icon: null,
-        label: '',
-      }
+    case 'critical-high': return 'bg-red-50'
+    case 'low':           return 'bg-blue-50'   // low = blue, clinician convention
+    case 'high':          return 'bg-amber-50'  // high = amber/orange
+    default:              return ''
+  }
+}
+
+// Result text color only
+function resultColor(status: AbnormalStatus, accepted: boolean): string {
+  if (accepted) return 'text-green-700'
+  switch (status) {
+    case 'critical-low':
+    case 'critical-high': return 'text-red-700'
+    case 'low':           return 'text-blue-700'
+    case 'high':          return 'text-amber-700'
+    default:              return ''
   }
 }
 
 function AutoFilledBadge() {
   return (
-    <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-600 text-xs gap-1">
+    <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-600 text-xs gap-1 shrink-0">
       <Sparkles className="h-3 w-3" />
       EHR
     </Badge>
   )
 }
 
-// ─── Initial Lab Data ─────────────────────────────────────────────────────────
+// ─── Initial Lab Data — grouped by panel ─────────────────────────────────────
 
 const INITIAL_LABS: LabRow[] = [
-  {
-    key: 'hgb',
-    test: 'Hemoglobin',
-    ehrValue: '7.2',
-    manualValue: null,
-    accepted: false,
-    overridden: false,
-    unit: 'g/dL',
-    refRange: '12.0 – 17.5',
-    normalLow: 12.0,
-    normalHigh: 17.5,
-    criticalLow: 7.0,
-    criticalHigh: 20.0,
-  },
-  {
-    key: 'inr',
-    test: 'INR',
-    ehrValue: '1.8',
-    manualValue: null,
-    accepted: false,
-    overridden: false,
-    unit: '',
-    refRange: '0.8 – 1.2',
-    normalLow: 0.8,
-    normalHigh: 1.2,
-    criticalLow: 0.5,
-    criticalHigh: 3.0,
-  },
-  {
-    key: 'plt',
-    test: 'Platelets',
-    ehrValue: '89',
-    manualValue: null,
-    accepted: false,
-    overridden: false,
-    unit: 'k/uL',
-    refRange: '150 – 400',
-    normalLow: 150,
-    normalHigh: 400,
-    criticalLow: 50,
-    criticalHigh: 1000,
-  },
-  {
-    key: 'lac',
-    test: 'Lactate',
-    ehrValue: '4.2',
-    manualValue: null,
-    accepted: false,
-    overridden: false,
-    unit: 'mmol/L',
-    refRange: '0.5 – 2.0',
-    normalLow: 0.5,
-    normalHigh: 2.0,
-    criticalLow: 0,
-    criticalHigh: 10.0,
-  },
-  {
-    key: 'ica',
-    test: 'Ionized Calcium',
-    ehrValue: '0.98',
-    manualValue: null,
-    accepted: false,
-    overridden: false,
-    unit: 'mmol/L',
-    refRange: '1.12 – 1.32',
-    normalLow: 1.12,
-    normalHigh: 1.32,
-    criticalLow: 0.75,
-    criticalHigh: 1.58,
-  },
-  {
-    key: 'fibrinogen',
-    test: 'Fibrinogen',
-    ehrValue: '148',
-    manualValue: null,
-    accepted: false,
-    overridden: false,
-    unit: 'mg/dL',
-    refRange: '200 – 400',
-    normalLow: 200,
-    normalHigh: 400,
-    criticalLow: 100,
-    criticalHigh: 700,
-  },
-  {
-    key: 'btype',
-    test: 'Blood Type / Rh',
-    ehrValue: 'O Positive',
-    manualValue: null,
-    accepted: false,
-    overridden: false,
-    unit: '',
-    refRange: '—',
-    isCategorical: true,
-  },
-  {
-    key: 'hcg',
-    test: 'hCG Qualitative',
-    ehrValue: 'Negative',
-    manualValue: null,
-    accepted: false,
-    overridden: false,
-    unit: '',
-    refRange: 'Negative',
-    isCategorical: true,
-  },
-  {
-    key: 'teg',
-    test: 'TEG / ROTEM',
-    ehrValue: null,
-    manualValue: null,
-    accepted: false,
-    overridden: false,
-    unit: '',
-    refRange: 'See report',
-    isCategorical: true,
-    requiresManual: true,
-  },
+  // CBC
+  { key: 'hgb',        panel: 'CBC',        test: 'Hemoglobin',      ehrValue: '7.2',      ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: 'g/dL',   refRange: '12.0 – 17.5', normalLow: 12.0, normalHigh: 17.5, criticalLow: 7.0,  criticalHigh: 20.0 },
+  { key: 'hct',        panel: 'CBC',        test: 'Hematocrit',      ehrValue: '22',       ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: '%',      refRange: '36 – 52',     normalLow: 36,   normalHigh: 52,   criticalLow: 21,   criticalHigh: 65   },
+  { key: 'plt',        panel: 'CBC',        test: 'Platelets',       ehrValue: '89',       ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: 'k/uL',   refRange: '150 – 400',   normalLow: 150,  normalHigh: 400,  criticalLow: 50,   criticalHigh: 1000 },
+  { key: 'wbc',        panel: 'CBC',        test: 'WBC',             ehrValue: '11.2',     ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: 'k/uL',   refRange: '4.5 – 11.0',  normalLow: 4.5,  normalHigh: 11.0, criticalLow: 2.0,  criticalHigh: 30.0 },
+  // Coagulation
+  { key: 'inr',        panel: 'Coag',       test: 'INR',             ehrValue: '1.8',      ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: '',       refRange: '0.8 – 1.2',   normalLow: 0.8,  normalHigh: 1.2,  criticalLow: 0.5,  criticalHigh: 3.0  },
+  { key: 'pt',         panel: 'Coag',       test: 'PT',              ehrValue: '18.4',     ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: 'sec',    refRange: '11 – 13.5',   normalLow: 11,   normalHigh: 13.5, criticalLow: 0,    criticalHigh: 25   },
+  { key: 'ptt',        panel: 'Coag',       test: 'aPTT',            ehrValue: '34',       ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: 'sec',    refRange: '25 – 35',     normalLow: 25,   normalHigh: 35,   criticalLow: 0,    criticalHigh: 70   },
+  { key: 'fibrinogen', panel: 'Coag',       test: 'Fibrinogen',      ehrValue: '148',      ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: 'mg/dL',  refRange: '200 – 400',   normalLow: 200,  normalHigh: 400,  criticalLow: 100,  criticalHigh: 700  },
+  // Chemistry
+  { key: 'lac',        panel: 'Chemistry',  test: 'Lactate',         ehrValue: '4.2',      ehrTimestamp: '04/11/2026 15:08', editedValue: null, accepted: false, unit: 'mmol/L', refRange: '0.5 – 2.0',   normalLow: 0.5,  normalHigh: 2.0,  criticalLow: 0,    criticalHigh: 10.0 },
+  { key: 'ica',        panel: 'Chemistry',  test: 'Ionized Calcium', ehrValue: '0.98',     ehrTimestamp: '04/11/2026 15:08', editedValue: null, accepted: false, unit: 'mmol/L', refRange: '1.12 – 1.32', normalLow: 1.12, normalHigh: 1.32, criticalLow: 0.75, criticalHigh: 1.58 },
+  { key: 'ph',         panel: 'Chemistry',  test: 'pH (ABG)',        ehrValue: '7.28',     ehrTimestamp: '04/11/2026 15:12', editedValue: null, accepted: false, unit: '',       refRange: '7.35 – 7.45', normalLow: 7.35, normalHigh: 7.45, criticalLow: 7.2,  criticalHigh: 7.6  },
+  { key: 'be',         panel: 'Chemistry',  test: 'Base Excess',     ehrValue: '-7.2',     ehrTimestamp: '04/11/2026 15:12', editedValue: null, accepted: false, unit: 'mEq/L',  refRange: '-2 to +2',    normalLow: -2,   normalHigh: 2,    criticalLow: -10,  criticalHigh: 10   },
+  // Categorical / Special
+  { key: 'btype',      panel: 'Type & Screen', test: 'Blood Type / Rh', ehrValue: 'O Positive', ehrTimestamp: '04/11/2026 15:05', editedValue: null, accepted: false, unit: '', refRange: '—', isCategorical: true },
+  { key: 'hcg',        panel: 'Type & Screen', test: 'hCG Qualitative', ehrValue: 'Negative',   ehrTimestamp: '04/11/2026 15:05', editedValue: null, accepted: false, unit: '', refRange: 'Negative', isCategorical: true },
+  { key: 'teg',        panel: 'Viscoelastic',  test: 'TEG / ROTEM',    ehrValue: null,          ehrTimestamp: null,               editedValue: null, accepted: false, unit: '', refRange: 'See report', isCategorical: true, requiresManual: true },
 ]
 
-// ─── Lab Row Component ────────────────────────────────────────────────────────
+const PANELS = ['CBC', 'Coag', 'Chemistry', 'Type & Screen', 'Viscoelastic']
 
-function LabTableRow({
+// ─── Editable Result Cell ─────────────────────────────────────────────────────
+
+function EditableResultCell({
   lab,
-  onAccept,
-  onOverride,
-  onManualChange,
-  onCancelOverride,
+  onChange,
 }: {
   lab: LabRow
-  onAccept: (key: string) => void
-  onOverride: (key: string) => void
-  onManualChange: (key: string, val: string) => void
-  onCancelOverride: (key: string) => void
+  onChange: (key: string, val: string) => void
 }) {
-  const [editingManual, setEditingManual] = useState(lab.requiresManual || false)
-  const status = getAbnormalStatus(lab)
-  const cfg = statusConfig(status)
-  const hasEHR = lab.ehrValue !== null
-  const displayVal = lab.overridden ? lab.manualValue : lab.ehrValue
-  const isResolved = lab.accepted || lab.overridden || lab.requiresManual
+  const [editing, setEditing] = useState(false)
+  const status = getStatus(lab)
+  const displayVal = lab.editedValue ?? lab.ehrValue
+  const isEdited = lab.editedValue !== null && lab.editedValue !== lab.ehrValue
+  const color = resultColor(status, lab.accepted)
+
+  if (lab.requiresManual || editing) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Input
+          autoFocus={editing}
+          value={displayVal ?? ''}
+          onChange={(e) => onChange(lab.key, e.target.value)}
+          onBlur={() => setEditing(false)}
+          placeholder="Enter value"
+          className="h-7 w-28 text-sm"
+        />
+        {lab.unit && <span className="text-xs text-muted-foreground">{lab.unit}</span>}
+      </div>
+    )
+  }
 
   return (
-    <TableRow className={cn(
-      'transition-colors',
-      status !== 'normal' && !lab.accepted && !lab.overridden ? cfg.bg : '',
-      lab.accepted ? 'bg-green-50/50' : '',
-    )}>
-      {/* Test name */}
-      <TableCell className="font-medium py-2">
-        <div className="flex items-center gap-1.5">
-          {status !== 'normal' && cfg.icon}
-          <span className={cn(status !== 'normal' && !lab.accepted ? cfg.text : '')}>{lab.test}</span>
-        </div>
-      </TableCell>
-
-      {/* Result */}
-      <TableCell className="py-2">
-        {lab.overridden || lab.requiresManual ? (
-          <div className="flex items-center gap-2">
-            <Input
-              value={lab.manualValue ?? ''}
-              onChange={(e) => onManualChange(lab.key, e.target.value)}
-              placeholder="Enter value"
-              className={cn('h-7 w-28 text-sm', lab.overridden ? 'border-amber-400 focus-visible:ring-amber-400' : '')}
-              autoFocus={editingManual}
-            />
-            {lab.overridden && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button onClick={() => onCancelOverride(lab.key)} className="text-muted-foreground hover:text-foreground">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Restore EHR value</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+    <div className="flex items-center gap-2">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className={cn(
+                'font-mono text-sm font-semibold rounded px-1 -mx-1 hover:bg-white/80 hover:ring-1 hover:ring-border transition-all text-left',
+                color
+              )}
+            >
+              {displayVal
+                ? <>{displayVal} <span className="font-normal text-muted-foreground text-xs">{lab.unit}</span></>
+                : <span className="font-normal text-muted-foreground italic">No EHR value — tap to add</span>
+              }
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-xs space-y-1 text-xs">
+            {isEdited ? (
+              <>
+                <p className="font-semibold">Manually edited</p>
+                <p>Original EHR value: <span className="font-mono">{lab.ehrValue}</span></p>
+                {lab.ehrTimestamp && <p className="text-muted-foreground">Pulled: {lab.ehrTimestamp}</p>}
+                <p className="text-muted-foreground">Audit trail preserved</p>
+              </>
+            ) : lab.ehrValue ? (
+              <>
+                <p className="font-semibold">Auto-filled from EHR</p>
+                {lab.ehrTimestamp && <p className="text-muted-foreground">Result time: {lab.ehrTimestamp}</p>}
+                <p className="text-muted-foreground">Click to edit / override</p>
+              </>
+            ) : (
+              <p>Click to enter value manually</p>
             )}
-          </div>
-        ) : hasEHR ? (
-          <div className="flex items-center gap-2">
-            <span className={cn(
-              'font-mono text-sm font-semibold',
-              status === 'critical-low' || status === 'critical-high' ? 'text-red-700' : '',
-              status === 'low' || status === 'high' ? 'text-amber-700' : '',
-              lab.accepted ? 'text-green-700' : '',
-            )}>
-              {displayVal} <span className="font-normal text-muted-foreground text-xs">{lab.unit}</span>
-            </span>
-            {status !== 'normal' && !lab.accepted && (
-              <Badge variant="outline" className={cn('text-xs border', cfg.badge)}>
-                {cfg.label}
-              </Badge>
-            )}
-          </div>
-        ) : (
-          <span className="text-muted-foreground text-sm italic">No EHR value</span>
-        )}
-      </TableCell>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      {isEdited && (
+        <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-700 shrink-0">
+          Edited
+        </Badge>
+      )}
+    </div>
+  )
+}
 
-      {/* Reference Range */}
-      <TableCell className="py-2 text-xs text-muted-foreground font-mono">
-        {lab.refRange}
-      </TableCell>
+// ─── Lab Table for one panel ──────────────────────────────────────────────────
 
-      {/* Source */}
-      <TableCell className="py-2">
-        {lab.overridden ? (
-          <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-700 gap-1">
-            <Pencil className="h-2.5 w-2.5" />
-            Manual override
-          </Badge>
-        ) : hasEHR ? (
-          <AutoFilledBadge />
-        ) : (
-          <Badge variant="outline" className="text-xs text-muted-foreground">
-            Manual entry
-          </Badge>
-        )}
-      </TableCell>
+function LabPanel({
+  panelName,
+  labs,
+  onAccept,
+  onChange,
+}: {
+  panelName: string
+  labs: LabRow[]
+  onAccept: (key: string) => void
+  onChange: (key: string, val: string) => void
+}) {
+  return (
+    <>
+      <TableRow className="bg-muted/50 hover:bg-muted/50">
+        <TableCell colSpan={6} className="py-1.5 pl-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {panelName}
+        </TableCell>
+      </TableRow>
+      {labs.map((lab) => {
+        const status = getStatus(lab)
+        const bg = rowBg(status, lab.accepted)
+        return (
+          <TableRow key={lab.key} className={cn('transition-colors', bg)}>
+            {/* Test */}
+            <TableCell className="py-2 pl-6 font-medium text-sm w-40">
+              <div className="flex items-center gap-1.5">
+                {status === 'critical-low' || status === 'critical-high'
+                  ? <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                  : (status === 'low' || status === 'high')
+                    ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                    : <span className="w-3.5" />
+                }
+                {lab.test}
+              </div>
+            </TableCell>
 
-      {/* Actions */}
-      <TableCell className="py-2">
-        {lab.accepted ? (
-          <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
-            <Check className="h-3.5 w-3.5" />
-            Accepted
-          </div>
-        ) : hasEHR && !lab.overridden ? (
-          <div className="flex items-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 gap-1 border-green-300 text-green-700 hover:bg-green-50 text-xs"
-                    onClick={() => onAccept(lab.key)}
-                  >
-                    <Check className="h-3 w-3" />
-                    Accept
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Accept EHR value as-is</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 gap-1 text-xs text-muted-foreground hover:text-amber-700"
-                    onClick={() => { onOverride(lab.key); setEditingManual(true) }}
-                  >
-                    <Pencil className="h-3 w-3" />
-                    Override
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Enter a different value</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        ) : null}
-      </TableCell>
-    </TableRow>
+            {/* Result — click to edit */}
+            <TableCell className="py-2">
+              <EditableResultCell lab={lab} onChange={onChange} />
+            </TableCell>
+
+            {/* Reference Range */}
+            <TableCell className="py-2 font-mono text-xs text-muted-foreground whitespace-nowrap">
+              {lab.refRange}
+            </TableCell>
+
+            {/* Date / Time */}
+            <TableCell className="py-2 text-xs text-muted-foreground whitespace-nowrap">
+              {lab.ehrTimestamp ?? (lab.requiresManual ? <span className="italic">Manual entry</span> : '—')}
+            </TableCell>
+
+            {/* Source */}
+            <TableCell className="py-2">
+              {lab.editedValue !== null && lab.editedValue !== lab.ehrValue ? (
+                <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-700">
+                  Override
+                </Badge>
+              ) : lab.ehrValue ? (
+                <AutoFilledBadge />
+              ) : (
+                <Badge variant="outline" className="text-xs text-muted-foreground">Manual</Badge>
+              )}
+            </TableCell>
+
+            {/* Accept */}
+            <TableCell className="py-2">
+              {lab.accepted ? (
+                <span className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                  <Check className="h-3.5 w-3.5" /> Accepted
+                </span>
+              ) : (lab.ehrValue || lab.editedValue) ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1 border-green-300 text-green-700 hover:bg-green-50 text-xs"
+                  onClick={() => onAccept(lab.key)}
+                >
+                  <Check className="h-3 w-3" />
+                  Accept
+                </Button>
+              ) : null}
+            </TableCell>
+          </TableRow>
+        )
+      })}
+    </>
   )
 }
 
@@ -419,40 +332,34 @@ export function OutcomeReview() {
   const [neuroOutcome, setNeuroOutcome] = useState<string>('')
   const [submitAttempted, setSubmitAttempted] = useState(false)
 
-  // ── Lab handlers ────────────────────────────────────────────────────────────
+  // ── Lab handlers ─────────────────────────────────────────────────────────────
   function acceptLab(key: string) {
-    setLabs((prev) => prev.map((l) => l.key === key ? { ...l, accepted: true, overridden: false } : l))
+    setLabs((prev) => prev.map((l) => l.key === key ? { ...l, accepted: true } : l))
   }
 
-  function overrideLab(key: string) {
-    setLabs((prev) => prev.map((l) => l.key === key ? { ...l, overridden: true, accepted: false } : l))
-  }
-
-  function manualChange(key: string, val: string) {
-    setLabs((prev) => prev.map((l) => l.key === key ? { ...l, manualValue: val } : l))
-  }
-
-  function cancelOverride(key: string) {
-    setLabs((prev) => prev.map((l) => l.key === key ? { ...l, overridden: false, manualValue: null } : l))
+  function changeLabValue(key: string, val: string) {
+    setLabs((prev) => prev.map((l) =>
+      l.key === key ? { ...l, editedValue: val, accepted: false } : l
+    ))
   }
 
   function acceptAllEHR() {
-    setLabs((prev) => prev.map((l) => l.ehrValue && !l.overridden ? { ...l, accepted: true } : l))
+    setLabs((prev) => prev.map((l) =>
+      (l.ehrValue && !l.requiresManual) ? { ...l, accepted: true } : l
+    ))
   }
 
-  // ── Validation ──────────────────────────────────────────────────────────────
+  // ── Validation ────────────────────────────────────────────────────────────────
   const criticalUnresolved = labs.filter((l) => {
-    const s = getAbnormalStatus(l)
-    return (s === 'critical-low' || s === 'critical-high') && !l.accepted && !l.overridden
+    const s = getStatus(l)
+    return (s === 'critical-low' || s === 'critical-high') && !l.accepted
   })
 
-  const abnormalUnresolved = labs.filter((l) => {
-    const s = getAbnormalStatus(l)
-    return (s === 'low' || s === 'high') && !l.accepted && !l.overridden
-  })
+  const ehrUnreviewed = labs.filter((l) =>
+    l.ehrValue && !l.accepted && !(l.editedValue !== null && l.editedValue !== l.ehrValue)
+  )
 
-  const ehrUnreviewed = labs.filter((l) => l.ehrValue && !l.accepted && !l.overridden)
-  const manualMissing = labs.filter((l) => l.requiresManual && !l.manualValue)
+  const manualMissing = labs.filter((l) => l.requiresManual && !l.editedValue && !l.ehrValue)
 
   const canSubmit =
     criticalUnresolved.length === 0 &&
@@ -463,15 +370,15 @@ export function OutcomeReview() {
   const blockingIssues = [
     ...criticalUnresolved.map((l) => ({
       type: 'critical' as const,
-      message: `${l.test} has a critical value that must be accepted or overridden`,
+      message: `${l.test} has a critical value — accept or override before submitting`,
     })),
-    ...ehrUnreviewed.slice(0, 2).map((l) => ({
+    ...ehrUnreviewed.slice(0, 3).map((l) => ({
       type: 'warning' as const,
-      message: `${l.test} has an unreviewed EHR value — accept or override`,
+      message: `${l.test} EHR value has not been reviewed`,
     })),
-    ...(ehrUnreviewed.length > 2 ? [{
+    ...(ehrUnreviewed.length > 3 ? [{
       type: 'warning' as const,
-      message: `${ehrUnreviewed.length - 2} more lab values need review`,
+      message: `${ehrUnreviewed.length - 3} more lab values need review`,
     }] : []),
     ...manualMissing.map((l) => ({
       type: 'info' as const,
@@ -488,6 +395,11 @@ export function OutcomeReview() {
     { label: '72 hr', time: '72hr', complete: true },
     { label: '30 days', time: '30d', complete: false },
   ]
+
+  // Summary counts for header pills
+  const criticalCount = labs.filter((l) => { const s = getStatus(l); return s === 'critical-low' || s === 'critical-high' }).length
+  const abnormalCount = labs.filter((l) => { const s = getStatus(l); return s === 'low' || s === 'high' }).length
+  const unreviewedCount = ehrUnreviewed.length
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -547,74 +459,78 @@ export function OutcomeReview() {
 
       {/* Admission Labs */}
       <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold">Admission Labs</CardTitle>
-            <div className="flex items-center gap-2">
-              {/* Status summary pills */}
-              {criticalUnresolved.length > 0 && (
-                <span className="flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
-                  <AlertCircle className="h-3 w-3" />
-                  {criticalUnresolved.length} critical
-                </span>
-              )}
-              {abnormalUnresolved.length > 0 && (
-                <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                  <AlertTriangle className="h-3 w-3" />
-                  {abnormalUnresolved.length} abnormal
-                </span>
-              )}
-              {ehrUnreviewed.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {ehrUnreviewed.length} unreviewed
-                </span>
-              )}
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 gap-1.5 text-xs border-green-300 text-green-700 hover:bg-green-50"
-                onClick={acceptAllEHR}
-              >
-                <ChevronsDown className="h-3.5 w-3.5" />
-                Accept All EHR
-              </Button>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle className="text-base font-semibold">Admission Labs</CardTitle>
+              {/* Lab window notice */}
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Info className="h-3 w-3 shrink-0" />
+                Only labs drawn within the configured window (default: 6 hrs of ED arrival) are auto-populated.
+                Values outside this window require manual entry.
+                <span className="ml-1 text-blue-600 underline cursor-pointer">Settings</span>
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 h-8 gap-1.5 text-xs border-green-300 text-green-700 hover:bg-green-50"
+              onClick={acceptAllEHR}
+            >
+              <ChevronsDown className="h-3.5 w-3.5" />
+              Accept All EHR
+            </Button>
+          </div>
+
+          {/* Status summary + legend row */}
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            {criticalCount > 0 && (
+              <span className="flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+                <AlertCircle className="h-3 w-3" /> {criticalCount} critical
+              </span>
+            )}
+            {abnormalCount > 0 && (
+              <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                <AlertTriangle className="h-3 w-3" /> {abnormalCount} abnormal
+              </span>
+            )}
+            {unreviewedCount > 0 && (
+              <span className="text-xs text-muted-foreground">{unreviewedCount} unreviewed</span>
+            )}
+            <div className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-300" /> Critical</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-amber-50 border border-amber-200" /> High</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-blue-50 border border-blue-200" /> Low</span>
             </div>
           </div>
-          {/* Legend */}
-          <div className="flex items-center gap-4 pt-1">
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <AlertCircle className="h-3 w-3 text-red-600" /> Critical value
-            </span>
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <AlertTriangle className="h-3 w-3 text-amber-500" /> Abnormal
-            </span>
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Sparkles className="h-3 w-3 text-blue-500" /> Auto-filled from EHR
-            </span>
-          </div>
         </CardHeader>
-        <CardContent className="px-0">
+
+        <CardContent className="px-0 pb-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-6">Test</TableHead>
+                <TableHead className="pl-6 w-40">Test</TableHead>
                 <TableHead>Result</TableHead>
-                <TableHead>Reference Range</TableHead>
+                <TableHead className="font-mono text-xs">Reference Range</TableHead>
+                <TableHead>Date / Time</TableHead>
                 <TableHead>Source</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead>Accept</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {labs.map((lab) => (
-                <LabTableRow
-                  key={lab.key}
-                  lab={lab}
-                  onAccept={acceptLab}
-                  onOverride={overrideLab}
-                  onManualChange={manualChange}
-                  onCancelOverride={cancelOverride}
-                />
-              ))}
+              {PANELS.map((panel) => {
+                const panelLabs = labs.filter((l) => l.panel === panel)
+                if (panelLabs.length === 0) return null
+                return (
+                  <LabPanel
+                    key={panel}
+                    panelName={panel}
+                    labs={panelLabs}
+                    onAccept={acceptLab}
+                    onChange={changeLabValue}
+                  />
+                )
+              })}
             </TableBody>
           </Table>
         </CardContent>
@@ -752,13 +668,13 @@ export function OutcomeReview() {
         </CardContent>
       </Card>
 
-      {/* Blocking issues panel — shown after attempted submit */}
+      {/* Blocking Issues — shown on failed submit */}
       {submitAttempted && blockingIssues.length > 0 && (
         <Card className="border-red-200 bg-red-50">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base text-red-700">
               <AlertCircle className="h-4 w-4" />
-              {blockingIssues.length} item{blockingIssues.length > 1 ? 's' : ''} need attention before submitting
+              {blockingIssues.length} item{blockingIssues.length !== 1 ? 's' : ''} must be addressed before submitting
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -767,9 +683,10 @@ export function OutcomeReview() {
                 <li key={i} className="flex items-start gap-2 text-sm">
                   {issue.type === 'critical' && <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-600" />}
                   {issue.type === 'warning' && <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />}
-                  {issue.type === 'info' && <span className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-400">i</span>}
+                  {issue.type === 'info' && <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-400" />}
                   <span className={cn(
-                    issue.type === 'critical' ? 'text-red-700' : 'text-amber-700'
+                    issue.type === 'critical' ? 'text-red-700' :
+                    issue.type === 'warning'  ? 'text-amber-700' : 'text-blue-700'
                   )}>
                     {issue.message}
                   </span>

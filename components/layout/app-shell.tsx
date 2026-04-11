@@ -100,13 +100,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
             <Avatar className="h-9 w-9 border border-sidebar-border">
               <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs">
-                LR
+                AB
               </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex flex-col">
-                <span className="text-sm font-medium">Laura Ramon-Spiel</span>
-                <span className="text-xs text-sidebar-foreground/60">Program Manager</span>
+                <span className="text-sm font-medium">Alison Bereschak</span>
+                <span className="text-xs text-sidebar-foreground/60">Program Director</span>
               </div>
             )}
           </div>
