@@ -6,17 +6,17 @@ import { usePathname } from 'next/navigation'
 
 // Mock data - would come from ePCR API when connected
 const MOCK_INCIDENTS = [
-  { id: 'INC-2024-78432', timestamp: '14:32', status: 'active', chief: 'MVC - Trauma', unit: 'M-41', patient: { age: 34, gender: 'M' } },
-  { id: 'INC-2024-78429', timestamp: '13:45', status: 'active', chief: 'Fall - Head Injury', unit: 'M-41', patient: { age: 67, gender: 'F' } },
-  { id: 'INC-2024-78415', timestamp: '11:20', status: 'completed', chief: 'GSW - Chest', unit: 'M-41', patient: { age: 22, gender: 'M' } },
+  { id: 'INC-2026-78432', timestamp: '14:32', status: 'active', chief: 'MVC - Trauma', unit: 'M-41', patient: { age: 34, gender: 'M' } },
+  { id: 'INC-2026-78429', timestamp: '13:45', status: 'active', chief: 'Fall - Head Injury', unit: 'M-41', patient: { age: 67, gender: 'F' } },
+  { id: 'INC-2026-78415', timestamp: '11:20', status: 'completed', chief: 'GSW - Chest', unit: 'M-41', patient: { age: 22, gender: 'M' } },
 ]
 
 // Mock data - would come from Delta BloodComm API when connected
 const MOCK_BLOOD_PRODUCTS = [
-  { unitId: 'W24-089234', productType: 'LTOWB', expiry: '2024-12-15', temp: '4.2°C' },
-  { unitId: 'W24-089235', productType: 'LTOWB', expiry: '2024-12-15', temp: '4.1°C' },
-  { unitId: 'R24-445521', productType: 'pRBC', expiry: '2024-12-20', temp: '4.0°C' },
-  { unitId: 'P24-112233', productType: 'Plasma', expiry: '2024-12-18', temp: '-18°C' },
+  { unitId: 'W26-089234', productType: 'LTOWB', expiry: '2026-04-25', temp: '4.2°C' },
+  { unitId: 'W26-089235', productType: 'LTOWB', expiry: '2026-04-25', temp: '4.1°C' },
+  { unitId: 'R26-445521', productType: 'pRBC', expiry: '2026-05-02', temp: '4.0°C' },
+  { unitId: 'P26-112233', productType: 'Plasma', expiry: '2026-04-30', temp: '-18°C' },
 ]
 
 type Incident = typeof MOCK_INCIDENTS[0] | { id: string; manual: true; patient?: { age?: number; gender?: string } }
