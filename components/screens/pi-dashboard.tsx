@@ -92,41 +92,41 @@ const survivalTrendData = [
 
 const caseQueueData = [
   {
-    patientId: 'PT-2024-0892',
+    patientId: 'PT-2026-0892',
     agency: 'Miami-Dade Fire Rescue',
-    date: 'Mar 12, 2024',
+    date: 'Apr 8, 2026',
     destination: 'Jackson Memorial',
     product: '2 units pRBC',
     status: 'overdue',
   },
   {
-    patientId: 'PT-2024-0901',
+    patientId: 'PT-2026-0901',
     agency: 'Orange County EMS',
-    date: 'Mar 14, 2024',
+    date: 'Apr 10, 2026',
     destination: 'Orlando Regional',
     product: '1 unit LTOWB',
     status: 'due-today',
   },
   {
-    patientId: 'PT-2024-0915',
+    patientId: 'PT-2026-0915',
     agency: 'Hillsborough County FR',
-    date: 'Mar 15, 2024',
+    date: 'Apr 9, 2026',
     destination: 'Tampa General',
     product: '1 unit LTOWB',
     status: 'in-review',
   },
   {
-    patientId: 'PT-2024-0923',
+    patientId: 'PT-2026-0923',
     agency: 'Broward Sheriff Fire',
-    date: 'Mar 16, 2024',
+    date: 'Apr 7, 2026',
     destination: 'Memorial Regional',
     product: '2 units Plasma',
     status: 'complete',
   },
   {
-    patientId: 'PT-2024-0931',
+    patientId: 'PT-2026-0931',
     agency: 'Palm Beach County FR',
-    date: 'Mar 17, 2024',
+    date: 'Apr 6, 2026',
     destination: 'St. Mary&apos;s Medical',
     product: '1 unit LTOWB',
     status: 'complete',
@@ -226,6 +226,11 @@ function getQualityDot(score: number) {
 export function PIDashboard() {
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-primary text-primary-foreground rounded-lg p-6 mb-6">
+        <h1 className="text-2xl font-bold mb-1">Prehospital Blood Transfusion Registry</h1>
+        <p className="text-sm opacity-90">Program Director: Alison Bereschak</p>
+      </div>
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-4">
         {kpiData.map((kpi) => (
