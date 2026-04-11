@@ -13,10 +13,10 @@ const MOCK_INCIDENTS = [
 
 // Mock data - would come from Delta BloodComm API when connected
 const MOCK_BLOOD_PRODUCTS = [
-  { unitId: 'W26-089234', productType: 'LTOWB', expiry: '2026-04-25', temp: '4.2°C' },
-  { unitId: 'W26-089235', productType: 'LTOWB', expiry: '2026-04-25', temp: '4.1°C' },
-  { unitId: 'R26-445521', productType: 'pRBC', expiry: '2026-05-02', temp: '4.0°C' },
-  { unitId: 'P26-112233', productType: 'Plasma', expiry: '2026-04-30', temp: '-18°C' },
+  { unitId: 'W26-089234', productType: 'LTOWB', expiry: '2026-04-25', temp: '4.2°C', scannedAt: '2026-04-11 14:08' },
+  { unitId: 'W26-089235', productType: 'LTOWB', expiry: '2026-04-25', temp: '4.1°C', scannedAt: '2026-04-11 14:09' },
+  { unitId: 'R26-445521', productType: 'pRBC',  expiry: '2026-05-02', temp: '4.0°C', scannedAt: '2026-04-11 13:52' },
+  { unitId: 'P26-112233', productType: 'Plasma', expiry: '2026-04-30', temp: '-18°C', scannedAt: '2026-04-11 13:53' },
 ]
 
 type Incident = typeof MOCK_INCIDENTS[0] | { id: string; manual: true; patient?: { age?: number; gender?: string } }
@@ -83,7 +83,7 @@ export function MedicQuickDoc() {
     minHeight: '100vh', 
     backgroundColor: '#F8FAFC', 
     fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-    paddingBottom: 60
+    paddingBottom: 120  // space for fixed submit + bottom nav on mobile
   }
   
   const card: React.CSSProperties = {
@@ -455,7 +455,7 @@ export function MedicQuickDoc() {
                     {isSelected && '✓'}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                       <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14 }}>{product.unitId}</span>
                       <span style={{
                         fontSize: 10,
@@ -468,8 +468,11 @@ export function MedicQuickDoc() {
                         {product.productType}
                       </span>
                     </div>
-                    <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
-                      Exp: {product.expiry} • {product.temp}
+                    <div style={{ fontSize: 11, color: '#6B7280' }}>
+                      Exp: {product.expiry} &nbsp;•&nbsp; {product.temp}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>
+                      Scanned: {product.scannedAt}
                     </div>
                   </div>
                 </button>
@@ -876,51 +879,93 @@ export function MedicQuickDoc() {
   )
 }
 
-// Bottom Navigation Component
+// SVG icon paths for bottom nav
+const NAV_ICONS: Record<string, React.ReactNode> = {
+  '/': (
+    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l2 2h3a2 2 0 012 2v12a2 2 0 01-2 2z" />
+    </svg>
+  ),
+  '/outcomes': (
+    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    </svg>
+  ),
+  '/dashboard': (
+    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  ),
+  '/registry': (
+    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h8M8 8h5M8 16h4" />
+    </svg>
+  ),
+}
+
+// Bottom Navigation Component — only shown on mobile (md:hidden via className)
 function BottomNav({ pathname }: { pathname: string }) {
+  const items = [
+    { href: '/',          label: 'Document'  },
+    { href: '/outcomes',  label: 'Outcomes'  },
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/registry',  label: 'Registry'  },
+  ]
+
   return (
-    <nav style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 56,
-      backgroundColor: '#ffffff',
-      borderTop: '1px solid #E5E7EB',
-      display: 'flex',
-      justifyContent: 'space-around',
-      alignItems: 'center'
-    }}>
-      {[
-        { href: '/', label: 'Document', active: pathname === '/' },
-        { href: '/outcomes', label: 'Outcomes', active: pathname === '/outcomes' },
-        { href: '/dashboard', label: 'Dashboard', active: pathname === '/dashboard' },
-        { href: '/registry', label: 'Registry', active: pathname === '/registry' },
-      ].map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 2,
-            textDecoration: 'none',
-            color: item.active ? '#1B2B4B' : '#9CA3AF',
-            fontSize: 11,
-            fontWeight: item.active ? 600 : 400
-          }}
-        >
-          <div style={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            backgroundColor: item.active ? '#1B2B4B' : 'transparent',
-            marginBottom: 2
-          }} />
-          <span>{item.label}</span>
-        </Link>
-      ))}
+    <nav
+      className="md:hidden"
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 58,
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #E5E7EB',
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        zIndex: 50,
+      }}
+    >
+      {items.map((item) => {
+        const active = pathname === item.href
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 2,
+              textDecoration: 'none',
+              color: active ? '#1B2B4B' : '#9CA3AF',
+              fontSize: 10,
+              fontWeight: active ? 700 : 400,
+              flex: 1,
+              paddingTop: 6,
+            }}
+          >
+            <div style={{ color: active ? '#1B2B4B' : '#9CA3AF' }}>
+              {NAV_ICONS[item.href]}
+            </div>
+            <span>{item.label}</span>
+            {active && (
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                width: 28,
+                height: 3,
+                borderRadius: '2px 2px 0 0',
+                backgroundColor: '#1B2B4B',
+              }} />
+            )}
+          </Link>
+        )
+      })}
     </nav>
   )
 }
