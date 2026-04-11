@@ -5,10 +5,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 // Mock data - would come from ePCR API when connected
+// Sorted reverse chronological (newest first)
 const MOCK_INCIDENTS = [
-  { id: 'INC-2026-78432', timestamp: '14:32', status: 'active', chief: 'MVC - Trauma', unit: 'M-41', patient: { age: 34, gender: 'M' } },
-  { id: 'INC-2026-78429', timestamp: '13:45', status: 'active', chief: 'Fall - Head Injury', unit: 'M-41', patient: { age: 67, gender: 'F' } },
-  { id: 'INC-2026-78415', timestamp: '11:20', status: 'completed', chief: 'GSW - Chest', unit: 'M-41', patient: { age: 22, gender: 'M' } },
+  { id: 'INC-2026-78432', date: '2026-04-11', time: '14:32', status: 'active', chief: 'MVC - Trauma', agency: 'Miami-Dade Fire Rescue', unit: 'R-41', patient: { age: 34, gender: 'M' } },
+  { id: 'INC-2026-78429', date: '2026-04-11', time: '13:45', status: 'active', chief: 'Fall - Head Injury', agency: 'Miami-Dade Fire Rescue', unit: 'M-22', patient: { age: 67, gender: 'F' } },
+  { id: 'INC-2026-78415', date: '2026-04-11', time: '11:20', status: 'completed', chief: 'GSW - Chest', agency: 'Broward County EMS', unit: 'M-41', patient: { age: 22, gender: 'M' } },
+  { id: 'INC-2026-78398', date: '2026-04-10', time: '22:15', status: 'completed', chief: 'Stabbing - Abdomen', agency: 'Miami-Dade Fire Rescue', unit: 'R-12', patient: { age: 28, gender: 'M' } },
+  { id: 'INC-2026-78356', date: '2026-04-10', time: '16:42', status: 'completed', chief: 'OB Hemorrhage', agency: 'Palm Beach County FR', unit: 'M-07', patient: { age: 31, gender: 'F' } },
+  { id: 'INC-2026-78301', date: '2026-04-09', time: '08:23', status: 'completed', chief: 'MVC - Ejection', agency: 'Orange County EMS', unit: 'R-33', patient: { age: 45, gender: 'M' } },
 ]
 
 // Mock data - would come from Delta BloodComm API when connected
@@ -19,7 +23,7 @@ const MOCK_BLOOD_PRODUCTS = [
   { unitId: 'P26-112233', productType: 'Plasma', expiry: '2026-04-30', temp: '-18°C', scannedAt: '2026-04-11 13:53' },
 ]
 
-type Incident = typeof MOCK_INCIDENTS[0] | { id: string; manual: true; patient?: { age?: number; gender?: string } }
+type Incident = typeof MOCK_INCIDENTS[0] | { id: string; date?: string; manual: true; patient?: { age?: number; gender?: string } }
 type BloodProduct = typeof MOCK_BLOOD_PRODUCTS[0] | { unitId: string; productType: string; manual: true }
 
 export function MedicQuickDoc() {
@@ -213,49 +217,114 @@ export function MedicQuickDoc() {
         </div>
 
         {incidentTab === 'api' && apiConnected ? (
-          // API-fed incident list
-          <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {MOCK_INCIDENTS.map((incident) => (
-              <button
-                key={incident.id}
-                onClick={() => {
-                  setSelectedIncident(incident)
-                  setView('products')
-                }}
-                style={{
-                  ...card,
-                  padding: 14,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'left'
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15 }}>{incident.id}</span>
-                    <span style={{
-                      fontSize: 10,
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                      backgroundColor: incident.status === 'active' ? '#22C55E' : '#E5E7EB',
-                      color: incident.status === 'active' ? '#fff' : '#6B7280',
-                      textTransform: 'uppercase',
-                      fontWeight: 600
-                    }}>
-                      {incident.status}
-                    </span>
+          // API-fed incident list - reverse chronological with date grouping
+          <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {/* Group by date */}
+            {(() => {
+              const grouped: Record<string, typeof MOCK_INCIDENTS> = {}
+              MOCK_INCIDENTS.forEach(inc => {
+                if (!grouped[inc.date]) grouped[inc.date] = []
+                grouped[inc.date].push(inc)
+              })
+              return Object.entries(grouped).map(([date, incidents]) => (
+                <div key={date}>
+                  {/* Date header */}
+                  <div style={{ 
+                    fontSize: 11, 
+                    fontWeight: 600, 
+                    color: '#6B7280', 
+                    padding: '8px 4px 4px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.03em'
+                  }}>
+                    {date === new Date().toISOString().split('T')[0] ? 'Today' : 
+                     date === new Date(Date.now() - 86400000).toISOString().split('T')[0] ? 'Yesterday' : 
+                     new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                   </div>
-                  <div style={{ fontSize: 14, color: '#374151' }}>{incident.chief}</div>
-                  <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
-                    {incident.unit} • {incident.timestamp} • Pt: {incident.patient.age}{incident.patient.gender}
-                  </div>
+                  {/* Incidents for this date */}
+                  {incidents.map((incident) => (
+                    <button
+                      key={incident.id}
+                      onClick={() => {
+                        setSelectedIncident(incident)
+                        setView('products')
+                      }}
+                      style={{
+                        ...card,
+                        width: '100%',
+                        padding: '12px 14px',
+                        marginBottom: 6,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 12,
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      {/* Time column */}
+                      <div style={{ 
+                        minWidth: 48, 
+                        fontFamily: 'monospace', 
+                        fontSize: 14, 
+                        fontWeight: 600, 
+                        color: '#374151',
+                        paddingTop: 2
+                      }}>
+                        {incident.time}
+                      </div>
+                      
+                      {/* Main content */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Top row: ID + Status */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14, color: '#1B2B4B' }}>
+                            {incident.id}
+                          </span>
+                          <span style={{
+                            fontSize: 9,
+                            padding: '2px 5px',
+                            borderRadius: 3,
+                            backgroundColor: incident.status === 'active' ? '#22C55E' : '#E5E7EB',
+                            color: incident.status === 'active' ? '#fff' : '#6B7280',
+                            textTransform: 'uppercase',
+                            fontWeight: 700,
+                            letterSpacing: '0.02em'
+                          }}>
+                            {incident.status}
+                          </span>
+                        </div>
+                        
+                        {/* Chief complaint - prominent */}
+                        <div style={{ fontSize: 14, fontWeight: 500, color: '#111827', marginBottom: 3 }}>
+                          {incident.chief}
+                        </div>
+                        
+                        {/* Bottom row: Patient + Agency + Unit */}
+                        <div style={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap',
+                          gap: '4px 12px',
+                          fontSize: 12, 
+                          color: '#6B7280' 
+                        }}>
+                          <span style={{ fontWeight: 500 }}>
+                            {incident.patient.age}y {incident.patient.gender === 'M' ? 'Male' : 'Female'}
+                          </span>
+                          <span style={{ color: '#9CA3AF' }}>|</span>
+                          <span>{incident.agency}</span>
+                          <span style={{ color: '#9CA3AF' }}>|</span>
+                          <span>{incident.unit}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Chevron */}
+                      <span style={{ fontSize: 20, color: '#D1D5DB', paddingTop: 6 }}>›</span>
+                    </button>
+                  ))}
                 </div>
-                <span style={{ fontSize: 24, color: '#D1D5DB' }}>›</span>
-              </button>
-            ))}
+              ))
+            })()}
           </div>
         ) : (
           // Manual entry form
