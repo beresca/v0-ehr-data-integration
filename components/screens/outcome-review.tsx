@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -41,7 +42,91 @@ import {
   Check,
   ChevronsDown,
   Info,
+  ChevronRight,
+  User,
 } from 'lucide-react'
+
+// ─── Case Queue Data ──────────────────────────────────────────────────────────
+
+interface CaseRecord {
+  patientId: string
+  patientName: string
+  age: number
+  gender: 'M' | 'F'
+  agency: string
+  date: string
+  destination: string
+  product: string
+  status: 'overdue' | 'due-today' | 'in-review' | 'complete'
+  dueIn?: string
+}
+
+const CASE_QUEUE: CaseRecord[] = [
+  {
+    patientId: 'PT-2026-0892',
+    patientName: 'Robert Chen',
+    age: 45,
+    gender: 'M',
+    agency: 'Miami-Dade Fire Rescue',
+    date: 'Apr 8, 2026',
+    destination: 'Jackson Memorial',
+    product: '2 units pRBC',
+    status: 'overdue',
+    dueIn: '12h overdue',
+  },
+  {
+    patientId: 'PT-2026-0901',
+    patientName: 'Sarah Martinez',
+    age: 32,
+    gender: 'F',
+    agency: 'Orange County EMS',
+    date: 'Apr 10, 2026',
+    destination: 'Orlando Regional',
+    product: '1 unit LTOWB',
+    status: 'due-today',
+    dueIn: '6h remaining',
+  },
+  {
+    patientId: 'PT-2026-0915',
+    patientName: 'Marcus Thompson',
+    age: 28,
+    gender: 'M',
+    agency: 'Hillsborough County FR',
+    date: 'Apr 9, 2026',
+    destination: 'Tampa General',
+    product: '1 unit LTOWB',
+    status: 'in-review',
+  },
+  {
+    patientId: 'PT-2026-0923',
+    patientName: 'Linda Williams',
+    age: 67,
+    gender: 'F',
+    agency: 'Broward Sheriff Fire',
+    date: 'Apr 7, 2026',
+    destination: 'Memorial Regional',
+    product: '2 units Plasma',
+    status: 'complete',
+  },
+]
+
+function getStatusColor(status: CaseRecord['status']) {
+  switch (status) {
+    case 'overdue': return 'bg-red-500'
+    case 'due-today': return 'bg-amber-500'
+    case 'in-review': return 'bg-blue-500'
+    case 'complete': return 'bg-green-500'
+  }
+}
+
+function getStatusLabel(status: CaseRecord['status']) {
+  switch (status) {
+    case 'overdue': return 'Overdue'
+    case 'due-today': return 'Due Today'
+    case 'in-review': return 'In Review'
+    case 'complete': return 'Complete'
+  }
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -317,6 +402,11 @@ function LabPanel({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function OutcomeReview() {
+  const searchParams = useSearchParams()
+  const initialCaseId = searchParams.get('id') || CASE_QUEUE.find(c => c.status !== 'complete')?.patientId || CASE_QUEUE[0].patientId
+  const [selectedCaseId, setSelectedCaseId] = useState(initialCaseId)
+  const selectedCase = CASE_QUEUE.find(c => c.patientId === selectedCaseId) || CASE_QUEUE[0]
+
   const [labs, setLabs] = useState<LabRow[]>(INITIAL_LABS)
   const [interventions, setInterventions] = useState({
     laparotomy: true,
@@ -402,30 +492,124 @@ export function OutcomeReview() {
   const unreviewedCount = ehrUnreviewed.length
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="flex gap-6">
+      {/* Case List Sidebar */}
+      <div className="w-80 shrink-0">
+        <div className="sticky top-4 space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1">
+            Pending Reviews ({CASE_QUEUE.filter(c => c.status !== 'complete').length})
+          </h2>
+          <div className="space-y-2">
+            {CASE_QUEUE.filter(c => c.status !== 'complete').map((caseItem) => (
+              <button
+                key={caseItem.patientId}
+                onClick={() => setSelectedCaseId(caseItem.patientId)}
+                className={cn(
+                  'w-full text-left p-3 rounded-lg border transition-all',
+                  selectedCaseId === caseItem.patientId
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className={cn('w-2 h-2 rounded-full shrink-0', getStatusColor(caseItem.status))} />
+                    <span className="font-mono text-sm font-semibold">{caseItem.patientId}</span>
+                  </div>
+                  <ChevronRight className={cn(
+                    'h-4 w-4 text-muted-foreground transition-transform',
+                    selectedCaseId === caseItem.patientId && 'text-primary'
+                  )} />
+                </div>
+                <div className="mt-1.5 pl-4">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    {caseItem.patientName}
+                    <span className="text-muted-foreground font-normal">
+                      {caseItem.age}{caseItem.gender}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {caseItem.date} &bull; {caseItem.product}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {caseItem.agency}
+                  </div>
+                  {caseItem.dueIn && (
+                    <div className={cn(
+                      'text-xs font-medium mt-1',
+                      caseItem.status === 'overdue' ? 'text-red-600' : 'text-amber-600'
+                    )}>
+                      {caseItem.dueIn}
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Completed cases collapsed */}
+          <details className="group">
+            <summary className="text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground px-1 py-2">
+              Completed ({CASE_QUEUE.filter(c => c.status === 'complete').length})
+            </summary>
+            <div className="space-y-2 mt-2">
+              {CASE_QUEUE.filter(c => c.status === 'complete').map((caseItem) => (
+                <button
+                  key={caseItem.patientId}
+                  onClick={() => setSelectedCaseId(caseItem.patientId)}
+                  className={cn(
+                    'w-full text-left p-3 rounded-lg border transition-all opacity-60',
+                    selectedCaseId === caseItem.patientId
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                    <span className="font-mono text-sm">{caseItem.patientId}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 pl-5">
+                    {caseItem.patientName} &bull; {caseItem.date}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </details>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 max-w-4xl space-y-6">
 
       {/* Header Card */}
       <Card className="bg-primary text-primary-foreground">
         <CardContent className="pt-6">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Marcus Thompson</h2>
+              <h2 className="text-xl font-semibold">{selectedCase.patientName}</h2>
               <p className="text-sm text-primary-foreground/70">
-                Apr 9, 2026 &bull; Hillsborough County Fire Rescue
+                {selectedCase.date} &bull; {selectedCase.agency}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Badge className="bg-primary-foreground/20 text-primary-foreground">
                 <Droplet className="mr-1 h-3 w-3" />
-                1 unit LTOWB
+                {selectedCase.product}
               </Badge>
               <Badge className="bg-primary-foreground/20 text-primary-foreground">
                 <MapPin className="mr-1 h-3 w-3" />
-                University Hospital ED
+                {selectedCase.destination}
               </Badge>
-              <Badge className="bg-amber-400/90 text-white">
+              <Badge className={cn(
+                'text-white',
+                selectedCase.status === 'overdue' ? 'bg-red-500' :
+                selectedCase.status === 'due-today' ? 'bg-amber-500' :
+                selectedCase.status === 'in-review' ? 'bg-blue-500' : 'bg-green-500'
+              )}>
                 <Clock className="mr-1 h-3 w-3" />
-                Review due: 49hr post-arrival
+                {getStatusLabel(selectedCase.status)}
+                {selectedCase.dueIn && ` (${selectedCase.dueIn})`}
               </Badge>
             </div>
           </div>
@@ -721,6 +905,8 @@ export function OutcomeReview() {
           </Button>
         </div>
       </div>
+
+      </div>{/* End main content */}
     </div>
   )
 }
