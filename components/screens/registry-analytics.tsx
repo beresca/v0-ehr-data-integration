@@ -47,7 +47,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 
-// ─── Aggregate / de-identified mock data ──────────────────────────────────────
+// ─── Aggregate / de-identified mock data — Registry Analytics ─────────────────
 
 const SUMMARY_STATS = [
   { label: 'Total cases (registry)', value: '1,284', sub: 'Jan 2024 – Apr 2026', icon: Users,      color: '#1B2B4B' },
