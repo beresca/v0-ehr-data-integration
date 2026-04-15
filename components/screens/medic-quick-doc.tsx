@@ -1028,23 +1028,100 @@ export function MedicQuickDoc() {
               onClick={() => setView('products')}
               style={{ fontSize: 12, color: '#1B2B4B', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
             >
-              Edit
+              Add
             </button>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {selectedProducts.map(p => (
-              <span key={p.unitId} style={{
-                padding: '6px 10px',
-                borderRadius: 6,
-                backgroundColor: '#F3F4F6',
-                fontFamily: 'monospace',
-                fontSize: 12,
-                fontWeight: 600
+              <div key={p.unitId} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 12px',
+                borderRadius: 8,
+                backgroundColor: '#F9FAFB',
+                border: '1px solid #E5E7EB'
               }}>
-                {p.productType}: {p.unitId}
-              </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    padding: '3px 8px',
+                    borderRadius: 4,
+                    backgroundColor: p.productType === 'LTOWB' ? '#DC2626' : p.productType === 'pRBC' ? '#B91C1C' : '#1B2B4B',
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 700
+                  }}>
+                    {p.productType}
+                  </span>
+                  <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                    {p.unitId}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    if (confirm(`Remove ${p.unitId} from this record?\n\nThis will require retransmitting the NEMSIS XML.`)) {
+                      setSelectedProducts(prev => prev.filter(prod => prod.unitId !== p.unitId))
+                      addToast(`Removed ${p.unitId} — retransmit NEMSIS to update registry`, 'warning')
+                    }
+                  }}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 6,
+                    border: '1px solid #E5E7EB',
+                    backgroundColor: '#fff',
+                    color: '#9CA3AF',
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.borderColor = '#EF4444'; e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.backgroundColor = '#FEF2F2' }}
+                  onMouseOut={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.color = '#9CA3AF'; e.currentTarget.style.backgroundColor = '#fff' }}
+                  title="Remove product"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                  </svg>
+                </button>
+              </div>
             ))}
+            {selectedProducts.length === 0 && (
+              <div style={{ padding: 16, textAlign: 'center', color: '#9CA3AF', fontSize: 13 }}>
+                No blood products added
+              </div>
+            )}
           </div>
+
+          {/* Retransmit NEMSIS action */}
+          <button
+            onClick={() => {
+              addToast('NEMSIS XML retransmitted to state registry', 'success')
+            }}
+            style={{
+              width: '100%',
+              marginTop: 12,
+              padding: '10px 14px',
+              borderRadius: 8,
+              border: '1px dashed #1B2B4B',
+              backgroundColor: '#F8FAFF',
+              color: '#1B2B4B',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Retransmit NEMSIS XML
+          </button>
         </section>
 
         {/* Indication */}
