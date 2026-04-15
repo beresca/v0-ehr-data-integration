@@ -928,21 +928,22 @@ export function MedicQuickDoc() {
         {/* Continue Button */}
         <div style={{ position: 'fixed', bottom: 60, left: 0, right: 0, padding: 12, backgroundColor: 'rgba(255,255,255,0.98)', borderTop: '1px solid #E5E7EB' }}>
           <button
-            disabled={selectedProducts.length === 0}
             onClick={() => setView('document')}
             style={{
               width: '100%',
               height: 52,
               borderRadius: 10,
               border: 'none',
-              backgroundColor: selectedProducts.length > 0 ? '#1B2B4B' : '#D1D5DB',
+              backgroundColor: '#1B2B4B',
               color: '#fff',
               fontSize: 16,
               fontWeight: 700,
-              cursor: selectedProducts.length > 0 ? 'pointer' : 'not-allowed'
+              cursor: 'pointer'
             }}
           >
-            Continue with {selectedProducts.length} Unit{selectedProducts.length !== 1 ? 's' : ''}
+            {selectedProducts.length > 0 
+              ? `Continue with ${selectedProducts.length} Unit${selectedProducts.length !== 1 ? 's' : ''}`
+              : 'Continue (No Products)'}
           </button>
         </div>
 
