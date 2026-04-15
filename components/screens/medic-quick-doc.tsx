@@ -547,20 +547,56 @@ export function MedicQuickDoc() {
       <div style={pageStyle}>
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
         {/* Incident Banner */}
-        <div style={{ backgroundColor: '#1B2B4B', color: '#fff', padding: '10px 16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: 10, opacity: 0.7, textTransform: 'uppercase' }}>Incident</div>
-              <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 16 }}>{selectedIncident?.id}</div>
+        {(() => {
+          const inc = selectedIncident && !('manual' in selectedIncident) ? selectedIncident : null
+          return (
+            <div style={{ backgroundColor: '#1B2B4B', color: '#fff', padding: '12px 16px' }}>
+              {/* Top row: ID + status + Change button */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15 }}>{selectedIncident?.id}</span>
+                  {inc && (
+                    <span style={{
+                      fontSize: 9, padding: '2px 6px', borderRadius: 3, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+                      backgroundColor: inc.status === 'active' ? '#22C55E' : 'rgba(255,255,255,0.2)',
+                      color: '#fff'
+                    }}>
+                      {inc.status}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setSelectedIncident(null); setView('incidents') }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, padding: '5px 12px', color: '#fff', fontSize: 12, cursor: 'pointer', flexShrink: 0, marginLeft: 8 }}
+                >
+                  Change
+                </button>
+              </div>
+
+              {/* Chief complaint */}
+              {inc && (
+                <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4, color: '#fff' }}>
+                  {inc.chief}
+                </div>
+              )}
+
+              {/* Detail row: age/sex · agency · unit · time */}
+              {inc && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 12px', marginTop: 5 }}>
+                  <span style={{ fontSize: 12, opacity: 0.85 }}>
+                    {inc.patient.age}y&nbsp;{inc.patient.gender === 'M' ? 'Male' : 'Female'}
+                  </span>
+                  <span style={{ fontSize: 12, opacity: 0.4 }}>|</span>
+                  <span style={{ fontSize: 12, opacity: 0.85 }}>{inc.agency}</span>
+                  <span style={{ fontSize: 12, opacity: 0.4 }}>|</span>
+                  <span style={{ fontSize: 12, opacity: 0.85 }}>Unit&nbsp;{inc.unit}</span>
+                  <span style={{ fontSize: 12, opacity: 0.4 }}>|</span>
+                  <span style={{ fontSize: 12, fontFamily: 'monospace', opacity: 0.85 }}>{inc.date}&nbsp;{inc.time}</span>
+                </div>
+              )}
             </div>
-            <button 
-              onClick={() => { setSelectedIncident(null); setView('incidents') }}
-              style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, padding: '6px 12px', color: '#fff', fontSize: 12, cursor: 'pointer' }}
-            >
-              Change
-            </button>
-          </div>
-        </div>
+          )
+        })()}
 
         {/* Header */}
         <header style={{ backgroundColor: '#1B2B4B', color: '#fff', padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
@@ -848,35 +884,60 @@ export function MedicQuickDoc() {
   return (
     <div style={pageStyle}>
       {/* Incident Banner */}
-      <div style={{ backgroundColor: '#1B2B4B', color: '#fff', padding: '10px 16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 10, opacity: 0.7, textTransform: 'uppercase' }}>Incident</div>
-            <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 16 }}>{selectedIncident?.id}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {shockIndex && (
-              <span style={{ 
-                backgroundColor: shockIndexMet ? '#D94F3D' : 'rgba(255,255,255,0.2)',
-                padding: '4px 10px',
-                borderRadius: 12,
-                fontSize: 12,
-                fontFamily: 'monospace'
-              }}>
-                SI: {shockIndex}
-              </span>
+      {(() => {
+        const inc = selectedIncident && !('manual' in selectedIncident) ? selectedIncident : null
+        return (
+          <div style={{ backgroundColor: '#1B2B4B', color: '#fff', padding: '12px 16px' }}>
+            {/* Top row: ID + status + criteria/SI pills */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15 }}>{selectedIncident?.id}</span>
+                {inc && (
+                  <span style={{
+                    fontSize: 9, padding: '2px 6px', borderRadius: 3, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+                    backgroundColor: inc.status === 'active' ? '#22C55E' : 'rgba(255,255,255,0.2)',
+                    color: '#fff'
+                  }}>
+                    {inc.status}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+                {shockIndex && (
+                  <span style={{ backgroundColor: shockIndexMet ? '#D94F3D' : 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 12, fontSize: 12, fontFamily: 'monospace' }}>
+                    SI: {shockIndex}
+                  </span>
+                )}
+                <span style={{ backgroundColor: criteriaMet >= 2 ? '#22C55E' : 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 12, fontSize: 12 }}>
+                  {criteriaMet}/4
+                </span>
+              </div>
+            </div>
+
+            {/* Chief complaint */}
+            {inc && (
+              <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>
+                {inc.chief}
+              </div>
             )}
-            <span style={{ 
-              backgroundColor: criteriaMet >= 2 ? '#22C55E' : 'rgba(255,255,255,0.2)',
-              padding: '4px 10px',
-              borderRadius: 12,
-              fontSize: 12
-            }}>
-              {criteriaMet}/4
-            </span>
+
+            {/* Detail row: age/sex · agency · unit · time */}
+            {inc && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 12px', marginTop: 5 }}>
+                <span style={{ fontSize: 12, opacity: 0.85 }}>
+                  {inc.patient.age}y&nbsp;{inc.patient.gender === 'M' ? 'Male' : 'Female'}
+                </span>
+                <span style={{ fontSize: 12, opacity: 0.4 }}>|</span>
+                <span style={{ fontSize: 12, opacity: 0.85 }}>{inc.agency}</span>
+                <span style={{ fontSize: 12, opacity: 0.4 }}>|</span>
+                <span style={{ fontSize: 12, opacity: 0.85 }}>Unit&nbsp;{inc.unit}</span>
+                <span style={{ fontSize: 12, opacity: 0.4 }}>|</span>
+                <span style={{ fontSize: 12, fontFamily: 'monospace', opacity: 0.85 }}>{inc.date}&nbsp;{inc.time}</span>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
+        )
+      })()}
 
       {/* Offline Banner */}
       {!isOnline && (
