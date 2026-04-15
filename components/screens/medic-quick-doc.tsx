@@ -694,34 +694,105 @@ export function MedicQuickDoc() {
                 </button>
               )
             })}
-            {/* Option to add additional units */}
-            <div style={{ padding: '6px 4px', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 4 }}>
-              Add additional unit
-            </div>
-            <div style={{ ...card, padding: 12 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  type="text"
-                  value={manualProductId}
-                  onChange={(e) => setManualProductId(e.target.value.toUpperCase())}
-                  placeholder="Scan or enter unit ID"
-                  style={{ flex: 1, padding: 10, fontSize: 14, fontFamily: 'monospace', fontWeight: 600, border: '2px solid #E5E7EB', borderRadius: 8, boxSizing: 'border-box' as const }}
-                />
-                <select
-                  value={manualProductType || ''}
-                  onChange={e => setManualProductType(e.target.value || null)}
-                  style={{ padding: '10px 8px', fontSize: 13, border: '2px solid #E5E7EB', borderRadius: 8, color: '#374151' }}
-                >
-                  <option value="">Type</option>
-                  {['LTOWB','pRBC','Plasma','Platelets'].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+            {/* Add additional unit */}
+            <div style={{ marginTop: 8, ...card, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Add additional unit
+              </div>
+
+              {/* Product type buttons — same style as Indication buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                {['LTOWB', 'pRBC', 'Plasma', 'Platelets'].map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setManualProductType(manualProductType === t ? null : t)}
+                    style={{
+                      height: 48,
+                      borderRadius: 8,
+                      border: '2px solid',
+                      borderColor: manualProductType === t ? '#1B2B4B' : '#E5E7EB',
+                      backgroundColor: manualProductType === t ? '#1B2B4B' : '#fff',
+                      color: manualProductType === t ? '#fff' : '#374151',
+                      fontSize: 15,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              {/* Unit ID — scan or type */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Scan mock button */}
                 <button
-                  onClick={addManualProduct}
-                  disabled={!manualProductId || !manualProductType}
-                  style={{ padding: '10px 14px', borderRadius: 8, border: 'none', backgroundColor: manualProductId && manualProductType ? '#1B2B4B' : '#D1D5DB', color: '#fff', fontWeight: 700, cursor: manualProductId && manualProductType ? 'pointer' : 'not-allowed' }}
+                  onClick={() => {
+                    // Mock: simulate a barcode scan populating a unit ID
+                    const mockId = `W26-0${Math.floor(10000 + Math.random() * 89999)}`
+                    setManualProductId(mockId)
+                    addToast(`Barcode scanned: ${mockId}`, 'info')
+                  }}
+                  style={{
+                    width: '100%',
+                    height: 48,
+                    borderRadius: 8,
+                    border: '2px dashed #1B2B4B',
+                    backgroundColor: '#F8FAFF',
+                    color: '#1B2B4B',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
                 >
-                  +
+                  {/* Barcode icon */}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 5v14M7 5v14M11 5v14M15 5v4M15 15v4M19 5v4M19 15v4M3 9h4M15 9h4M3 15h4M15 15h4"/>
+                  </svg>
+                  Scan Barcode
                 </button>
+
+                {/* Manual text entry */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={manualProductId}
+                    onChange={(e) => setManualProductId(e.target.value.toUpperCase())}
+                    placeholder="Enter unit ID manually"
+                    style={{
+                      flex: 1,
+                      padding: '12px 14px',
+                      fontSize: 14,
+                      fontFamily: 'monospace',
+                      fontWeight: 600,
+                      border: '2px solid #E5E7EB',
+                      borderRadius: 8,
+                      outline: 'none',
+                      boxSizing: 'border-box' as const,
+                    }}
+                  />
+                  <button
+                    onClick={addManualProduct}
+                    disabled={!manualProductId || !manualProductType}
+                    style={{
+                      padding: '12px 18px',
+                      borderRadius: 8,
+                      border: 'none',
+                      backgroundColor: manualProductId && manualProductType ? '#1B2B4B' : '#E5E7EB',
+                      color: manualProductId && manualProductType ? '#fff' : '#9CA3AF',
+                      fontWeight: 700,
+                      fontSize: 15,
+                      cursor: manualProductId && manualProductType ? 'pointer' : 'not-allowed',
+                      transition: 'background-color 0.15s',
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
               </div>
             </div>
           </div>
