@@ -1097,6 +1097,65 @@ export function MedicQuickDoc() {
             )}
           </div>
 
+          {/* Available units to add — show scanned units not yet selected */}
+          {(() => {
+            const availableUnits = MOCK_BLOOD_PRODUCTS.filter(
+              p => !selectedProducts.some(sp => sp.unitId === p.unitId)
+            )
+            if (availableUnits.length === 0) return null
+            return (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+                  Available Scanned Units
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {availableUnits.map(p => (
+                    <button
+                      key={p.unitId}
+                      onClick={() => {
+                        setSelectedProducts(prev => [...prev, p])
+                        addToast(`Added ${p.unitId} (${p.productType})`, 'success')
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        backgroundColor: '#fff',
+                        border: '1px dashed #D1D5DB',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        width: '100%',
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{
+                          padding: '3px 8px',
+                          borderRadius: 4,
+                          backgroundColor: p.productType === 'LTOWB' ? '#DC2626' : p.productType === 'pRBC' ? '#B91C1C' : '#1B2B4B',
+                          color: '#fff',
+                          fontSize: 10,
+                          fontWeight: 700
+                        }}>
+                          {p.productType}
+                        </span>
+                        <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                          {p.unitId}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#9CA3AF' }}>
+                          Exp: {p.expiry}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 20, color: '#22C55E', fontWeight: 700 }}>+</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Retransmit NEMSIS action */}
           <button
             onClick={() => {
