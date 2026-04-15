@@ -231,7 +231,7 @@ export function MedicQuickDoc() {
               })
               return Object.entries(grouped).map(([date, incidents]) => (
                 <div key={date}>
-                  {/* Date header - using static formatting to avoid hydration mismatch */}
+                  {/* Date header - static format to avoid hydration mismatch */}
                   <div style={{ 
                     fontSize: 11, 
                     fontWeight: 600, 
@@ -240,8 +240,12 @@ export function MedicQuickDoc() {
                     textTransform: 'uppercase',
                     letterSpacing: '0.03em'
                   }}>
-                    {/* Format: Apr 11, 2026 */}
-                    {new Date(date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {/* Use fixed format: parse YYYY-MM-DD manually */}
+                    {(() => {
+                      const [year, month, day] = date.split('-')
+                      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                      return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`
+                    })()}
                   </div>
                   {/* Incidents for this date */}
                   {incidents.map((incident) => (
