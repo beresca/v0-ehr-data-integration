@@ -228,7 +228,7 @@ export function MedicQuickDoc() {
               })
               return Object.entries(grouped).map(([date, incidents]) => (
                 <div key={date}>
-                  {/* Date header */}
+                  {/* Date header - using static formatting to avoid hydration mismatch */}
                   <div style={{ 
                     fontSize: 11, 
                     fontWeight: 600, 
@@ -237,9 +237,8 @@ export function MedicQuickDoc() {
                     textTransform: 'uppercase',
                     letterSpacing: '0.03em'
                   }}>
-                    {date === new Date().toISOString().split('T')[0] ? 'Today' : 
-                     date === new Date(Date.now() - 86400000).toISOString().split('T')[0] ? 'Yesterday' : 
-                     new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {/* Format: Apr 11, 2026 */}
+                    {new Date(date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
                   {/* Incidents for this date */}
                   {incidents.map((incident) => (
