@@ -29,7 +29,9 @@ import {
   Droplet,
   CheckCircle,
   Thermometer,
+  ExternalLink,
 } from 'lucide-react'
+import Link from 'next/link'
 import {
   ChartConfig,
   ChartContainer,
@@ -370,13 +372,33 @@ export function PIDashboard() {
             </TableHeader>
             <TableBody>
               {caseQueueData.map((row) => (
-                <TableRow key={row.patientId} className={cn(row.status === 'overdue' && 'bg-destructive/5')}>
-                  <TableCell className="font-medium">{row.patientId}</TableCell>
+                <TableRow key={row.patientId} className={cn(row.status === 'overdue' && 'bg-destructive/5', 'hover:bg-muted/50 cursor-pointer')}>
+                  <TableCell className="font-medium">
+                    <Link 
+                      href={`/outcomes?id=${row.patientId}`}
+                      className="text-primary hover:underline flex items-center gap-1"
+                    >
+                      {row.patientId}
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </TableCell>
                   <TableCell>{row.agency}</TableCell>
                   <TableCell>{row.date}</TableCell>
                   <TableCell>{row.destination}</TableCell>
                   <TableCell>{row.product}</TableCell>
-                  <TableCell>{getStatusBadge(row.status)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(row.status)}
+                      {row.status !== 'complete' && (
+                        <Link 
+                          href={`/outcomes?id=${row.patientId}`}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          {row.status === 'in-review' ? 'Continue' : 'Review'}
+                        </Link>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

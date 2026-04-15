@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -41,7 +42,130 @@ import {
   Check,
   ChevronsDown,
   Info,
+  ChevronRight,
+  User,
 } from 'lucide-react'
+
+// ─── Case Queue Data ──────────────────────────────────────────────────────────
+
+interface CaseRecord {
+  patientId: string
+  incidentId: string
+  patientName: string
+  age: number
+  gender: 'M' | 'F'
+  agency: string
+  date: string
+  destination: string
+  product: string
+  scannedProducts: { unitId: string; productType: string; scannedAt: string }[]
+  epcrImported: boolean
+  bloodScanned: boolean
+  status: 'overdue' | 'due-today' | 'in-review' | 'complete'
+  dueIn?: string
+  chief: string
+  vitals?: { sbp: number; hr: number; gcs?: number }
+}
+
+const CASE_QUEUE: CaseRecord[] = [
+  {
+    patientId: 'PT-2026-0892',
+    incidentId: 'INC-2026-78432',
+    patientName: 'Robert Chen',
+    age: 45,
+    gender: 'M',
+    agency: 'Miami-Dade Fire Rescue',
+    date: 'Apr 8, 2026',
+    destination: 'Jackson Memorial',
+    product: '2 units LTOWB',
+    scannedProducts: [
+      { unitId: 'W26-089234', productType: 'LTOWB', scannedAt: '2026-04-08 14:08' },
+      { unitId: 'W26-089235', productType: 'LTOWB', scannedAt: '2026-04-08 14:22' },
+    ],
+    epcrImported: true,
+    bloodScanned: true,
+    status: 'overdue',
+    dueIn: '12h overdue',
+    chief: 'MVC - Trauma',
+    vitals: { sbp: 72, hr: 128, gcs: 11 },
+  },
+  {
+    patientId: 'PT-2026-0901',
+    incidentId: 'INC-2026-78398',
+    patientName: 'Sarah Martinez',
+    age: 32,
+    gender: 'F',
+    agency: 'Orange County EMS',
+    date: 'Apr 10, 2026',
+    destination: 'Orlando Regional',
+    product: '1 unit Plasma',
+    scannedProducts: [
+      { unitId: 'P26-112233', productType: 'Plasma', scannedAt: '2026-04-10 22:18' },
+    ],
+    epcrImported: true,
+    bloodScanned: true,
+    status: 'due-today',
+    dueIn: '6h remaining',
+    chief: 'Stabbing - Abdomen',
+    vitals: { sbp: 88, hr: 112, gcs: 15 },
+  },
+  {
+    patientId: 'PT-2026-0915',
+    incidentId: 'INC-2026-78415',
+    patientName: 'Marcus Thompson',
+    age: 28,
+    gender: 'M',
+    agency: 'Hillsborough County FR',
+    date: 'Apr 9, 2026',
+    destination: 'Tampa General',
+    product: '1 unit pRBC',
+    scannedProducts: [
+      { unitId: 'R26-445521', productType: 'pRBC', scannedAt: '2026-04-09 11:35' },
+    ],
+    epcrImported: true,
+    bloodScanned: true,
+    status: 'in-review',
+    chief: 'GSW - Chest',
+    vitals: { sbp: 64, hr: 142, gcs: 8 },
+  },
+  {
+    patientId: 'PT-2026-0923',
+    incidentId: 'INC-2026-78301',
+    patientName: 'Linda Williams',
+    age: 67,
+    gender: 'F',
+    agency: 'Broward Sheriff Fire',
+    date: 'Apr 7, 2026',
+    destination: 'Memorial Regional',
+    product: '1 unit LTOWB',
+    scannedProducts: [
+      { unitId: 'W26-089234', productType: 'LTOWB', scannedAt: '2026-04-07 08:45' },
+    ],
+    epcrImported: true,
+    bloodScanned: true,
+    status: 'complete',
+    chief: 'MVC - Ejection',
+    vitals: { sbp: 78, hr: 118, gcs: 13 },
+  },
+]
+
+function getStatusColor(status: CaseRecord['status']) {
+  switch (status) {
+    case 'overdue': return 'bg-red-500'
+    case 'due-today': return 'bg-amber-500'
+    case 'in-review': return 'bg-blue-500'
+    case 'complete': return 'bg-green-500'
+  }
+}
+
+function getStatusLabel(status: CaseRecord['status']) {
+  switch (status) {
+    case 'overdue': return 'Overdue'
+    case 'due-today': return 'Due Today'
+    case 'in-review': return 'In Review'
+    case 'complete': return 'Complete'
+  }
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -118,29 +242,107 @@ function AutoFilledBadge() {
   )
 }
 
-// ─── Initial Lab Data — grouped by panel ─────────────────────────────────────
+// ─── Lab Template — structure only, no values ─────────────────────────────────
 
-const INITIAL_LABS: LabRow[] = [
-  // CBC
-  { key: 'hgb',        panel: 'CBC',        test: 'Hemoglobin',      ehrValue: '7.2',      ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: 'g/dL',   refRange: '12.0 – 17.5', normalLow: 12.0, normalHigh: 17.5, criticalLow: 7.0,  criticalHigh: 20.0 },
-  { key: 'hct',        panel: 'CBC',        test: 'Hematocrit',      ehrValue: '22',       ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: '%',      refRange: '36 – 52',     normalLow: 36,   normalHigh: 52,   criticalLow: 21,   criticalHigh: 65   },
-  { key: 'plt',        panel: 'CBC',        test: 'Platelets',       ehrValue: '89',       ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: 'k/uL',   refRange: '150 – 400',   normalLow: 150,  normalHigh: 400,  criticalLow: 50,   criticalHigh: 1000 },
-  { key: 'wbc',        panel: 'CBC',        test: 'WBC',             ehrValue: '11.2',     ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: 'k/uL',   refRange: '4.5 – 11.0',  normalLow: 4.5,  normalHigh: 11.0, criticalLow: 2.0,  criticalHigh: 30.0 },
-  // Coagulation
-  { key: 'inr',        panel: 'Coag',       test: 'INR',             ehrValue: '1.8',      ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: '',       refRange: '0.8 – 1.2',   normalLow: 0.8,  normalHigh: 1.2,  criticalLow: 0.5,  criticalHigh: 3.0  },
-  { key: 'pt',         panel: 'Coag',       test: 'PT',              ehrValue: '18.4',     ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: 'sec',    refRange: '11 – 13.5',   normalLow: 11,   normalHigh: 13.5, criticalLow: 0,    criticalHigh: 25   },
-  { key: 'ptt',        panel: 'Coag',       test: 'aPTT',            ehrValue: '34',       ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: 'sec',    refRange: '25 – 35',     normalLow: 25,   normalHigh: 35,   criticalLow: 0,    criticalHigh: 70   },
-  { key: 'fibrinogen', panel: 'Coag',       test: 'Fibrinogen',      ehrValue: '148',      ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: 'mg/dL',  refRange: '200 – 400',   normalLow: 200,  normalHigh: 400,  criticalLow: 100,  criticalHigh: 700  },
-  // Chemistry
-  { key: 'lac',        panel: 'Chemistry',  test: 'Lactate',         ehrValue: '4.2',      ehrTimestamp: '04/11/2026 15:08', editedValue: null, accepted: false, unit: 'mmol/L', refRange: '0.5 – 2.0',   normalLow: 0.5,  normalHigh: 2.0,  criticalLow: 0,    criticalHigh: 10.0 },
-  { key: 'ica',        panel: 'Chemistry',  test: 'Ionized Calcium', ehrValue: '0.98',     ehrTimestamp: '04/11/2026 15:08', editedValue: null, accepted: false, unit: 'mmol/L', refRange: '1.12 – 1.32', normalLow: 1.12, normalHigh: 1.32, criticalLow: 0.75, criticalHigh: 1.58 },
-  { key: 'ph',         panel: 'Chemistry',  test: 'pH (ABG)',        ehrValue: '7.28',     ehrTimestamp: '04/11/2026 15:12', editedValue: null, accepted: false, unit: '',       refRange: '7.35 – 7.45', normalLow: 7.35, normalHigh: 7.45, criticalLow: 7.2,  criticalHigh: 7.6  },
-  { key: 'be',         panel: 'Chemistry',  test: 'Base Excess',     ehrValue: '-7.2',     ehrTimestamp: '04/11/2026 15:12', editedValue: null, accepted: false, unit: 'mEq/L',  refRange: '-2 to +2',    normalLow: -2,   normalHigh: 2,    criticalLow: -10,  criticalHigh: 10   },
-  // Categorical / Special
-  { key: 'btype',      panel: 'Type & Screen', test: 'Blood Type / Rh', ehrValue: 'O Positive', ehrTimestamp: '04/11/2026 15:05', editedValue: null, accepted: false, unit: '', refRange: '—', isCategorical: true },
-  { key: 'hcg',        panel: 'Type & Screen', test: 'hCG Qualitative', ehrValue: 'Negative',   ehrTimestamp: '04/11/2026 15:05', editedValue: null, accepted: false, unit: '', refRange: 'Negative', isCategorical: true },
-  { key: 'teg',        panel: 'Viscoelastic',  test: 'TEG / ROTEM',    ehrValue: null,          ehrTimestamp: null,               editedValue: null, accepted: false, unit: '', refRange: 'See report', isCategorical: true, requiresManual: true },
-]
+function makeLabTemplate(): LabRow[] {
+  return [
+    { key: 'hgb',        panel: 'CBC',           test: 'Hemoglobin',       ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'g/dL',   refRange: '12.0 – 17.5', normalLow: 12.0, normalHigh: 17.5, criticalLow: 7.0,  criticalHigh: 20.0 },
+    { key: 'hct',        panel: 'CBC',           test: 'Hematocrit',       ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '%',      refRange: '36 – 52',     normalLow: 36,   normalHigh: 52,   criticalLow: 21,   criticalHigh: 65   },
+    { key: 'plt',        panel: 'CBC',           test: 'Platelets',        ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'k/uL',   refRange: '150 – 400',   normalLow: 150,  normalHigh: 400,  criticalLow: 50,   criticalHigh: 1000 },
+    { key: 'wbc',        panel: 'CBC',           test: 'WBC',              ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'k/uL',   refRange: '4.5 – 11.0',  normalLow: 4.5,  normalHigh: 11.0, criticalLow: 2.0,  criticalHigh: 30.0 },
+    { key: 'inr',        panel: 'Coag',          test: 'INR',              ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '',       refRange: '0.8 – 1.2',   normalLow: 0.8,  normalHigh: 1.2,  criticalLow: 0.5,  criticalHigh: 3.0  },
+    { key: 'pt',         panel: 'Coag',          test: 'PT',               ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'sec',    refRange: '11 – 13.5',   normalLow: 11,   normalHigh: 13.5, criticalLow: 0,    criticalHigh: 25   },
+    { key: 'ptt',        panel: 'Coag',          test: 'aPTT',             ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'sec',    refRange: '25 – 35',     normalLow: 25,   normalHigh: 35,   criticalLow: 0,    criticalHigh: 70   },
+    { key: 'fibrinogen', panel: 'Coag',          test: 'Fibrinogen',       ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'mg/dL',  refRange: '200 – 400',   normalLow: 200,  normalHigh: 400,  criticalLow: 100,  criticalHigh: 700  },
+    { key: 'lac',        panel: 'Chemistry',     test: 'Lactate',          ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'mmol/L', refRange: '0.5 – 2.0',   normalLow: 0.5,  normalHigh: 2.0,  criticalLow: 0,    criticalHigh: 10.0 },
+    { key: 'ica',        panel: 'Chemistry',     test: 'Ionized Calcium',  ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'mmol/L', refRange: '1.12 – 1.32', normalLow: 1.12, normalHigh: 1.32, criticalLow: 0.75, criticalHigh: 1.58 },
+    { key: 'ph',         panel: 'Chemistry',     test: 'pH (ABG)',         ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '',       refRange: '7.35 – 7.45', normalLow: 7.35, normalHigh: 7.45, criticalLow: 7.2,  criticalHigh: 7.6  },
+    { key: 'be',         panel: 'Chemistry',     test: 'Base Excess',      ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'mEq/L',  refRange: '-2 to +2',    normalLow: -2,   normalHigh: 2,    criticalLow: -10,  criticalHigh: 10   },
+    { key: 'btype',      panel: 'Type & Screen', test: 'Blood Type / Rh',  ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '',       refRange: '—',           isCategorical: true },
+    { key: 'hcg',        panel: 'Type & Screen', test: 'hCG Qualitative',  ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '',       refRange: 'Negative',    isCategorical: true },
+    { key: 'teg',        panel: 'Viscoelastic',  test: 'TEG / ROTEM',      ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '',       refRange: 'See report',  isCategorical: true, requiresManual: true },
+  ]
+}
+
+// ─── Per-patient EHR lab values ───────────────────────────────────────────────
+// Keyed by patientId → labKey → { value, timestamp }
+const PATIENT_LABS: Record<string, Record<string, { value: string; timestamp: string }>> = {
+  'PT-2026-0892': { // Robert Chen — MVC, severe hemorrhagic shock, 2 units LTOWB
+    hgb:        { value: '5.8',        timestamp: '04/08/2026 15:14' },
+    hct:        { value: '18',         timestamp: '04/08/2026 15:14' },
+    plt:        { value: '72',         timestamp: '04/08/2026 15:14' },
+    wbc:        { value: '14.6',       timestamp: '04/08/2026 15:14' },
+    inr:        { value: '2.4',        timestamp: '04/08/2026 15:20' },
+    pt:         { value: '24.1',       timestamp: '04/08/2026 15:20' },
+    ptt:        { value: '58',         timestamp: '04/08/2026 15:20' },
+    fibrinogen: { value: '102',        timestamp: '04/08/2026 15:20' },
+    lac:        { value: '6.8',        timestamp: '04/08/2026 15:18' },
+    ica:        { value: '0.88',       timestamp: '04/08/2026 15:18' },
+    ph:         { value: '7.18',       timestamp: '04/08/2026 15:22' },
+    be:         { value: '-12.4',      timestamp: '04/08/2026 15:22' },
+    btype:      { value: 'O Negative', timestamp: '04/08/2026 15:10' },
+    hcg:        { value: 'N/A (Male)', timestamp: '04/08/2026 15:10' },
+  },
+  'PT-2026-0901': { // Sarah Martinez — stab abdomen, 1 unit Plasma
+    hgb:        { value: '9.4',        timestamp: '04/10/2026 23:02' },
+    hct:        { value: '28',         timestamp: '04/10/2026 23:02' },
+    plt:        { value: '198',        timestamp: '04/10/2026 23:02' },
+    wbc:        { value: '16.2',       timestamp: '04/10/2026 23:02' },
+    inr:        { value: '1.6',        timestamp: '04/10/2026 23:08' },
+    pt:         { value: '16.2',       timestamp: '04/10/2026 23:08' },
+    ptt:        { value: '44',         timestamp: '04/10/2026 23:08' },
+    fibrinogen: { value: '172',        timestamp: '04/10/2026 23:08' },
+    lac:        { value: '3.1',        timestamp: '04/10/2026 23:05' },
+    ica:        { value: '1.02',       timestamp: '04/10/2026 23:05' },
+    ph:         { value: '7.31',       timestamp: '04/10/2026 23:10' },
+    be:         { value: '-5.1',       timestamp: '04/10/2026 23:10' },
+    btype:      { value: 'A Positive', timestamp: '04/10/2026 22:58' },
+    hcg:        { value: 'Negative',   timestamp: '04/10/2026 22:58' },
+  },
+  'PT-2026-0915': { // Marcus Thompson — GSW chest, 1 unit pRBC (in-review)
+    hgb:        { value: '7.2',        timestamp: '04/09/2026 12:04' },
+    hct:        { value: '22',         timestamp: '04/09/2026 12:04' },
+    plt:        { value: '89',         timestamp: '04/09/2026 12:04' },
+    wbc:        { value: '11.2',       timestamp: '04/09/2026 12:04' },
+    inr:        { value: '1.8',        timestamp: '04/09/2026 12:10' },
+    pt:         { value: '18.4',       timestamp: '04/09/2026 12:10' },
+    ptt:        { value: '34',         timestamp: '04/09/2026 12:10' },
+    fibrinogen: { value: '148',        timestamp: '04/09/2026 12:10' },
+    lac:        { value: '4.2',        timestamp: '04/09/2026 12:08' },
+    ica:        { value: '0.98',       timestamp: '04/09/2026 12:08' },
+    ph:         { value: '7.28',       timestamp: '04/09/2026 12:12' },
+    be:         { value: '-7.2',       timestamp: '04/09/2026 12:12' },
+    btype:      { value: 'O Positive', timestamp: '04/09/2026 12:05' },
+    hcg:        { value: 'N/A (Male)', timestamp: '04/09/2026 12:05' },
+  },
+  'PT-2026-0923': { // Linda Williams — MVC ejection, 1 unit LTOWB (complete)
+    hgb:        { value: '10.1',       timestamp: '04/07/2026 09:15' },
+    hct:        { value: '30',         timestamp: '04/07/2026 09:15' },
+    plt:        { value: '142',        timestamp: '04/07/2026 09:15' },
+    wbc:        { value: '9.8',        timestamp: '04/07/2026 09:15' },
+    inr:        { value: '1.3',        timestamp: '04/07/2026 09:22' },
+    pt:         { value: '14.2',       timestamp: '04/07/2026 09:22' },
+    ptt:        { value: '38',         timestamp: '04/07/2026 09:22' },
+    fibrinogen: { value: '221',        timestamp: '04/07/2026 09:22' },
+    lac:        { value: '2.8',        timestamp: '04/07/2026 09:18' },
+    ica:        { value: '1.08',       timestamp: '04/07/2026 09:18' },
+    ph:         { value: '7.33',       timestamp: '04/07/2026 09:24' },
+    be:         { value: '-3.8',       timestamp: '04/07/2026 09:24' },
+    btype:      { value: 'B Positive', timestamp: '04/07/2026 09:10' },
+    hcg:        { value: 'Negative',   timestamp: '04/07/2026 09:10' },
+  },
+}
+
+// Build the initial labs for a given patient, merging template + patient values
+function buildLabsForPatient(patientId: string): LabRow[] {
+  const patientValues = PATIENT_LABS[patientId] ?? {}
+  return makeLabTemplate().map((lab) => {
+    const patientLab = patientValues[lab.key]
+    return patientLab
+      ? { ...lab, ehrValue: patientLab.value, ehrTimestamp: patientLab.timestamp }
+      : lab
+  })
+}
 
 const PANELS = ['CBC', 'Coag', 'Chemistry', 'Type & Screen', 'Viscoelastic']
 
@@ -317,7 +519,12 @@ function LabPanel({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function OutcomeReview() {
-  const [labs, setLabs] = useState<LabRow[]>(INITIAL_LABS)
+  const searchParams = useSearchParams()
+  const initialCaseId = searchParams.get('id') || CASE_QUEUE.find(c => c.status !== 'complete')?.patientId || CASE_QUEUE[0].patientId
+  const [selectedCaseId, setSelectedCaseId] = useState(initialCaseId)
+  const selectedCase = CASE_QUEUE.find(c => c.patientId === selectedCaseId) || CASE_QUEUE[0]
+
+  const [labs, setLabs] = useState<LabRow[]>(() => buildLabsForPatient(initialCaseId))
   const [interventions, setInterventions] = useState({
     laparotomy: true,
     intubation: true,
@@ -331,6 +538,16 @@ export function OutcomeReview() {
   const [alive30Days, setAlive30Days] = useState<boolean | null>(true)
   const [neuroOutcome, setNeuroOutcome] = useState<string>('')
   const [submitAttempted, setSubmitAttempted] = useState(false)
+
+  // ── Reset all form state when patient changes ─────────────────────────────────
+  useEffect(() => {
+    setLabs(buildLabsForPatient(selectedCaseId))
+    setInterventions({ laparotomy: false, intubation: false, thoracotomy: false, reboa: false, angiography: false, txa: false, acReversal: false })
+    setMtpRecipient(false)
+    setAlive30Days(null)
+    setNeuroOutcome('')
+    setSubmitAttempted(false)
+  }, [selectedCaseId])
 
   // ── Lab handlers ─────────────────────────────────────────────────────────────
   function acceptLab(key: string) {
@@ -402,33 +619,232 @@ export function OutcomeReview() {
   const unreviewedCount = ehrUnreviewed.length
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="flex gap-6">
+      {/* Case List Sidebar */}
+      <div className="w-80 shrink-0">
+        <div className="sticky top-4 space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1">
+            Pending Reviews ({CASE_QUEUE.filter(c => c.status !== 'complete').length})
+          </h2>
+          <div className="space-y-2">
+            {CASE_QUEUE.filter(c => c.status !== 'complete').map((caseItem) => (
+              <button
+                key={caseItem.patientId}
+                onClick={() => setSelectedCaseId(caseItem.patientId)}
+                className={cn(
+                  'w-full text-left p-3 rounded-lg border transition-all',
+                  selectedCaseId === caseItem.patientId
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className={cn('w-2 h-2 rounded-full shrink-0', getStatusColor(caseItem.status))} />
+                    <span className="font-mono text-sm font-semibold">{caseItem.patientId}</span>
+                  </div>
+                  <ChevronRight className={cn(
+                    'h-4 w-4 text-muted-foreground transition-transform',
+                    selectedCaseId === caseItem.patientId && 'text-primary'
+                  )} />
+                </div>
+                <div className="mt-1.5 pl-4">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    {caseItem.patientName}
+                    <span className="text-muted-foreground font-normal">
+                      {caseItem.age}{caseItem.gender}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {caseItem.date} &bull; {caseItem.chief}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {caseItem.agency}
+                  </div>
+                  {/* Source badges */}
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    {caseItem.epcrImported && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l2 2h3a2 2 0 012 2v12a2 2 0 01-2 2z" />
+                        </svg>
+                        ePCR
+                      </span>
+                    )}
+                    {caseItem.bloodScanned && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-700 border border-red-200">
+                        <Droplet className="w-2.5 h-2.5" />
+                        {caseItem.scannedProducts.length} unit{caseItem.scannedProducts.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                  {caseItem.dueIn && (
+                    <div className={cn(
+                      'text-xs font-medium mt-1',
+                      caseItem.status === 'overdue' ? 'text-red-600' : 'text-amber-600'
+                    )}>
+                      {caseItem.dueIn}
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Completed cases collapsed */}
+          <details className="group">
+            <summary className="text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground px-1 py-2">
+              Completed ({CASE_QUEUE.filter(c => c.status === 'complete').length})
+            </summary>
+            <div className="space-y-2 mt-2">
+              {CASE_QUEUE.filter(c => c.status === 'complete').map((caseItem) => (
+                <button
+                  key={caseItem.patientId}
+                  onClick={() => setSelectedCaseId(caseItem.patientId)}
+                  className={cn(
+                    'w-full text-left p-3 rounded-lg border transition-all opacity-60',
+                    selectedCaseId === caseItem.patientId
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                    <span className="font-mono text-sm">{caseItem.patientId}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 pl-5">
+                    {caseItem.patientName} &bull; {caseItem.date}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </details>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 max-w-4xl space-y-6">
 
       {/* Header Card */}
       <Card className="bg-primary text-primary-foreground">
         <CardContent className="pt-6">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Marcus Thompson</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold">{selectedCase.patientName}</h2>
+                <span className="font-mono text-sm opacity-70">{selectedCase.incidentId}</span>
+              </div>
               <p className="text-sm text-primary-foreground/70">
-                Apr 9, 2026 &bull; Hillsborough County Fire Rescue
+                {selectedCase.date} &bull; {selectedCase.agency} &bull; {selectedCase.chief}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Badge className="bg-primary-foreground/20 text-primary-foreground">
                 <Droplet className="mr-1 h-3 w-3" />
-                1 unit LTOWB
+                {selectedCase.product}
               </Badge>
               <Badge className="bg-primary-foreground/20 text-primary-foreground">
                 <MapPin className="mr-1 h-3 w-3" />
-                University Hospital ED
+                {selectedCase.destination}
               </Badge>
-              <Badge className="bg-amber-400/90 text-white">
+              <Badge className={cn(
+                'text-white',
+                selectedCase.status === 'overdue' ? 'bg-red-500' :
+                selectedCase.status === 'due-today' ? 'bg-amber-500' :
+                selectedCase.status === 'in-review' ? 'bg-blue-500' : 'bg-green-500'
+              )}>
                 <Clock className="mr-1 h-3 w-3" />
-                Review due: 49hr post-arrival
+                {getStatusLabel(selectedCase.status)}
+                {selectedCase.dueIn && ` (${selectedCase.dueIn})`}
               </Badge>
             </div>
           </div>
+
+          {/* Expandable ePCR + Blood Products Detail */}
+          <details className="mt-4 pt-4 border-t border-primary-foreground/20">
+            <summary className="cursor-pointer text-sm font-medium flex items-center gap-2 hover:opacity-80">
+              <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+              View ePCR Data &amp; Scanned Products
+              <div className="flex gap-1.5 ml-2">
+                {selectedCase.epcrImported && (
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/30 text-blue-100">ePCR</span>
+                )}
+                {selectedCase.bloodScanned && (
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-400/30 text-red-100">{selectedCase.scannedProducts.length} units</span>
+                )}
+              </div>
+            </summary>
+            
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {/* ePCR Data */}
+              <div className="rounded-lg bg-primary-foreground/10 p-4">
+                <h4 className="text-xs uppercase tracking-wider opacity-70 mb-3">ePCR Documentation</h4>
+                {selectedCase.epcrImported ? (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="opacity-70">Incident</span>
+                      <span className="font-mono font-medium">{selectedCase.incidentId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-70">Chief Complaint</span>
+                      <span className="font-medium">{selectedCase.chief}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-70">Patient</span>
+                      <span className="font-medium">{selectedCase.age}y {selectedCase.gender === 'M' ? 'Male' : 'Female'}</span>
+                    </div>
+                    {selectedCase.vitals && (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="opacity-70">Field SBP</span>
+                          <span className={cn('font-medium', selectedCase.vitals.sbp < 90 && 'text-red-300')}>{selectedCase.vitals.sbp} mmHg</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="opacity-70">Field HR</span>
+                          <span className={cn('font-medium', selectedCase.vitals.hr > 100 && 'text-amber-300')}>{selectedCase.vitals.hr} bpm</span>
+                        </div>
+                        {selectedCase.vitals.gcs && (
+                          <div className="flex justify-between">
+                            <span className="opacity-70">GCS</span>
+                            <span className={cn('font-medium', selectedCase.vitals.gcs < 14 && 'text-amber-300')}>{selectedCase.vitals.gcs}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm opacity-60 italic">No ePCR data imported for this incident</p>
+                )}
+              </div>
+
+              {/* Scanned Blood Products */}
+              <div className="rounded-lg bg-primary-foreground/10 p-4">
+                <h4 className="text-xs uppercase tracking-wider opacity-70 mb-3">Scanned Blood Products</h4>
+                {selectedCase.bloodScanned && selectedCase.scannedProducts.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedCase.scannedProducts.map((product) => (
+                      <div key={product.unitId} className="flex items-center justify-between text-sm bg-primary-foreground/10 rounded p-2">
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            'px-2 py-0.5 rounded text-xs font-bold',
+                            product.productType === 'LTOWB' ? 'bg-red-500 text-white' :
+                            product.productType === 'pRBC' ? 'bg-red-700 text-white' : 'bg-amber-500 text-white'
+                          )}>
+                            {product.productType}
+                          </span>
+                          <span className="font-mono font-medium">{product.unitId}</span>
+                        </div>
+                        <span className="text-xs opacity-60">{product.scannedAt}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm opacity-60 italic">No blood products scanned for this incident</p>
+                )}
+              </div>
+            </div>
+          </details>
         </CardContent>
       </Card>
 
@@ -721,6 +1137,8 @@ export function OutcomeReview() {
           </Button>
         </div>
       </div>
+
+      </div>{/* End main content */}
     </div>
   )
 }
