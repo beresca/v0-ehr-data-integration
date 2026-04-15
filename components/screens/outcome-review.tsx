@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -242,29 +242,107 @@ function AutoFilledBadge() {
   )
 }
 
-// ─── Initial Lab Data — grouped by panel ─────────────────────────────────────
+// ─── Lab Template — structure only, no values ─────────────────────────────────
 
-const INITIAL_LABS: LabRow[] = [
-  // CBC
-  { key: 'hgb',        panel: 'CBC',        test: 'Hemoglobin',      ehrValue: '7.2',      ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: 'g/dL',   refRange: '12.0 – 17.5', normalLow: 12.0, normalHigh: 17.5, criticalLow: 7.0,  criticalHigh: 20.0 },
-  { key: 'hct',        panel: 'CBC',        test: 'Hematocrit',      ehrValue: '22',       ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: '%',      refRange: '36 – 52',     normalLow: 36,   normalHigh: 52,   criticalLow: 21,   criticalHigh: 65   },
-  { key: 'plt',        panel: 'CBC',        test: 'Platelets',       ehrValue: '89',       ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: 'k/uL',   refRange: '150 – 400',   normalLow: 150,  normalHigh: 400,  criticalLow: 50,   criticalHigh: 1000 },
-  { key: 'wbc',        panel: 'CBC',        test: 'WBC',             ehrValue: '11.2',     ehrTimestamp: '04/11/2026 15:04', editedValue: null, accepted: false, unit: 'k/uL',   refRange: '4.5 – 11.0',  normalLow: 4.5,  normalHigh: 11.0, criticalLow: 2.0,  criticalHigh: 30.0 },
-  // Coagulation
-  { key: 'inr',        panel: 'Coag',       test: 'INR',             ehrValue: '1.8',      ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: '',       refRange: '0.8 – 1.2',   normalLow: 0.8,  normalHigh: 1.2,  criticalLow: 0.5,  criticalHigh: 3.0  },
-  { key: 'pt',         panel: 'Coag',       test: 'PT',              ehrValue: '18.4',     ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: 'sec',    refRange: '11 – 13.5',   normalLow: 11,   normalHigh: 13.5, criticalLow: 0,    criticalHigh: 25   },
-  { key: 'ptt',        panel: 'Coag',       test: 'aPTT',            ehrValue: '34',       ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: 'sec',    refRange: '25 – 35',     normalLow: 25,   normalHigh: 35,   criticalLow: 0,    criticalHigh: 70   },
-  { key: 'fibrinogen', panel: 'Coag',       test: 'Fibrinogen',      ehrValue: '148',      ehrTimestamp: '04/11/2026 15:10', editedValue: null, accepted: false, unit: 'mg/dL',  refRange: '200 – 400',   normalLow: 200,  normalHigh: 400,  criticalLow: 100,  criticalHigh: 700  },
-  // Chemistry
-  { key: 'lac',        panel: 'Chemistry',  test: 'Lactate',         ehrValue: '4.2',      ehrTimestamp: '04/11/2026 15:08', editedValue: null, accepted: false, unit: 'mmol/L', refRange: '0.5 – 2.0',   normalLow: 0.5,  normalHigh: 2.0,  criticalLow: 0,    criticalHigh: 10.0 },
-  { key: 'ica',        panel: 'Chemistry',  test: 'Ionized Calcium', ehrValue: '0.98',     ehrTimestamp: '04/11/2026 15:08', editedValue: null, accepted: false, unit: 'mmol/L', refRange: '1.12 – 1.32', normalLow: 1.12, normalHigh: 1.32, criticalLow: 0.75, criticalHigh: 1.58 },
-  { key: 'ph',         panel: 'Chemistry',  test: 'pH (ABG)',        ehrValue: '7.28',     ehrTimestamp: '04/11/2026 15:12', editedValue: null, accepted: false, unit: '',       refRange: '7.35 – 7.45', normalLow: 7.35, normalHigh: 7.45, criticalLow: 7.2,  criticalHigh: 7.6  },
-  { key: 'be',         panel: 'Chemistry',  test: 'Base Excess',     ehrValue: '-7.2',     ehrTimestamp: '04/11/2026 15:12', editedValue: null, accepted: false, unit: 'mEq/L',  refRange: '-2 to +2',    normalLow: -2,   normalHigh: 2,    criticalLow: -10,  criticalHigh: 10   },
-  // Categorical / Special
-  { key: 'btype',      panel: 'Type & Screen', test: 'Blood Type / Rh', ehrValue: 'O Positive', ehrTimestamp: '04/11/2026 15:05', editedValue: null, accepted: false, unit: '', refRange: '—', isCategorical: true },
-  { key: 'hcg',        panel: 'Type & Screen', test: 'hCG Qualitative', ehrValue: 'Negative',   ehrTimestamp: '04/11/2026 15:05', editedValue: null, accepted: false, unit: '', refRange: 'Negative', isCategorical: true },
-  { key: 'teg',        panel: 'Viscoelastic',  test: 'TEG / ROTEM',    ehrValue: null,          ehrTimestamp: null,               editedValue: null, accepted: false, unit: '', refRange: 'See report', isCategorical: true, requiresManual: true },
-]
+function makeLabTemplate(): LabRow[] {
+  return [
+    { key: 'hgb',        panel: 'CBC',           test: 'Hemoglobin',       ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'g/dL',   refRange: '12.0 – 17.5', normalLow: 12.0, normalHigh: 17.5, criticalLow: 7.0,  criticalHigh: 20.0 },
+    { key: 'hct',        panel: 'CBC',           test: 'Hematocrit',       ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '%',      refRange: '36 – 52',     normalLow: 36,   normalHigh: 52,   criticalLow: 21,   criticalHigh: 65   },
+    { key: 'plt',        panel: 'CBC',           test: 'Platelets',        ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'k/uL',   refRange: '150 – 400',   normalLow: 150,  normalHigh: 400,  criticalLow: 50,   criticalHigh: 1000 },
+    { key: 'wbc',        panel: 'CBC',           test: 'WBC',              ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'k/uL',   refRange: '4.5 – 11.0',  normalLow: 4.5,  normalHigh: 11.0, criticalLow: 2.0,  criticalHigh: 30.0 },
+    { key: 'inr',        panel: 'Coag',          test: 'INR',              ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '',       refRange: '0.8 – 1.2',   normalLow: 0.8,  normalHigh: 1.2,  criticalLow: 0.5,  criticalHigh: 3.0  },
+    { key: 'pt',         panel: 'Coag',          test: 'PT',               ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'sec',    refRange: '11 – 13.5',   normalLow: 11,   normalHigh: 13.5, criticalLow: 0,    criticalHigh: 25   },
+    { key: 'ptt',        panel: 'Coag',          test: 'aPTT',             ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'sec',    refRange: '25 – 35',     normalLow: 25,   normalHigh: 35,   criticalLow: 0,    criticalHigh: 70   },
+    { key: 'fibrinogen', panel: 'Coag',          test: 'Fibrinogen',       ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'mg/dL',  refRange: '200 – 400',   normalLow: 200,  normalHigh: 400,  criticalLow: 100,  criticalHigh: 700  },
+    { key: 'lac',        panel: 'Chemistry',     test: 'Lactate',          ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'mmol/L', refRange: '0.5 – 2.0',   normalLow: 0.5,  normalHigh: 2.0,  criticalLow: 0,    criticalHigh: 10.0 },
+    { key: 'ica',        panel: 'Chemistry',     test: 'Ionized Calcium',  ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'mmol/L', refRange: '1.12 – 1.32', normalLow: 1.12, normalHigh: 1.32, criticalLow: 0.75, criticalHigh: 1.58 },
+    { key: 'ph',         panel: 'Chemistry',     test: 'pH (ABG)',         ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '',       refRange: '7.35 – 7.45', normalLow: 7.35, normalHigh: 7.45, criticalLow: 7.2,  criticalHigh: 7.6  },
+    { key: 'be',         panel: 'Chemistry',     test: 'Base Excess',      ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: 'mEq/L',  refRange: '-2 to +2',    normalLow: -2,   normalHigh: 2,    criticalLow: -10,  criticalHigh: 10   },
+    { key: 'btype',      panel: 'Type & Screen', test: 'Blood Type / Rh',  ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '',       refRange: '—',           isCategorical: true },
+    { key: 'hcg',        panel: 'Type & Screen', test: 'hCG Qualitative',  ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '',       refRange: 'Negative',    isCategorical: true },
+    { key: 'teg',        panel: 'Viscoelastic',  test: 'TEG / ROTEM',      ehrValue: null, ehrTimestamp: null, editedValue: null, accepted: false, unit: '',       refRange: 'See report',  isCategorical: true, requiresManual: true },
+  ]
+}
+
+// ─── Per-patient EHR lab values ───────────────────────────────────────────────
+// Keyed by patientId → labKey → { value, timestamp }
+const PATIENT_LABS: Record<string, Record<string, { value: string; timestamp: string }>> = {
+  'PT-2026-0892': { // Robert Chen — MVC, severe hemorrhagic shock, 2 units LTOWB
+    hgb:        { value: '5.8',        timestamp: '04/08/2026 15:14' },
+    hct:        { value: '18',         timestamp: '04/08/2026 15:14' },
+    plt:        { value: '72',         timestamp: '04/08/2026 15:14' },
+    wbc:        { value: '14.6',       timestamp: '04/08/2026 15:14' },
+    inr:        { value: '2.4',        timestamp: '04/08/2026 15:20' },
+    pt:         { value: '24.1',       timestamp: '04/08/2026 15:20' },
+    ptt:        { value: '58',         timestamp: '04/08/2026 15:20' },
+    fibrinogen: { value: '102',        timestamp: '04/08/2026 15:20' },
+    lac:        { value: '6.8',        timestamp: '04/08/2026 15:18' },
+    ica:        { value: '0.88',       timestamp: '04/08/2026 15:18' },
+    ph:         { value: '7.18',       timestamp: '04/08/2026 15:22' },
+    be:         { value: '-12.4',      timestamp: '04/08/2026 15:22' },
+    btype:      { value: 'O Negative', timestamp: '04/08/2026 15:10' },
+    hcg:        { value: 'N/A (Male)', timestamp: '04/08/2026 15:10' },
+  },
+  'PT-2026-0901': { // Sarah Martinez — stab abdomen, 1 unit Plasma
+    hgb:        { value: '9.4',        timestamp: '04/10/2026 23:02' },
+    hct:        { value: '28',         timestamp: '04/10/2026 23:02' },
+    plt:        { value: '198',        timestamp: '04/10/2026 23:02' },
+    wbc:        { value: '16.2',       timestamp: '04/10/2026 23:02' },
+    inr:        { value: '1.6',        timestamp: '04/10/2026 23:08' },
+    pt:         { value: '16.2',       timestamp: '04/10/2026 23:08' },
+    ptt:        { value: '44',         timestamp: '04/10/2026 23:08' },
+    fibrinogen: { value: '172',        timestamp: '04/10/2026 23:08' },
+    lac:        { value: '3.1',        timestamp: '04/10/2026 23:05' },
+    ica:        { value: '1.02',       timestamp: '04/10/2026 23:05' },
+    ph:         { value: '7.31',       timestamp: '04/10/2026 23:10' },
+    be:         { value: '-5.1',       timestamp: '04/10/2026 23:10' },
+    btype:      { value: 'A Positive', timestamp: '04/10/2026 22:58' },
+    hcg:        { value: 'Negative',   timestamp: '04/10/2026 22:58' },
+  },
+  'PT-2026-0915': { // Marcus Thompson — GSW chest, 1 unit pRBC (in-review)
+    hgb:        { value: '7.2',        timestamp: '04/09/2026 12:04' },
+    hct:        { value: '22',         timestamp: '04/09/2026 12:04' },
+    plt:        { value: '89',         timestamp: '04/09/2026 12:04' },
+    wbc:        { value: '11.2',       timestamp: '04/09/2026 12:04' },
+    inr:        { value: '1.8',        timestamp: '04/09/2026 12:10' },
+    pt:         { value: '18.4',       timestamp: '04/09/2026 12:10' },
+    ptt:        { value: '34',         timestamp: '04/09/2026 12:10' },
+    fibrinogen: { value: '148',        timestamp: '04/09/2026 12:10' },
+    lac:        { value: '4.2',        timestamp: '04/09/2026 12:08' },
+    ica:        { value: '0.98',       timestamp: '04/09/2026 12:08' },
+    ph:         { value: '7.28',       timestamp: '04/09/2026 12:12' },
+    be:         { value: '-7.2',       timestamp: '04/09/2026 12:12' },
+    btype:      { value: 'O Positive', timestamp: '04/09/2026 12:05' },
+    hcg:        { value: 'N/A (Male)', timestamp: '04/09/2026 12:05' },
+  },
+  'PT-2026-0923': { // Linda Williams — MVC ejection, 1 unit LTOWB (complete)
+    hgb:        { value: '10.1',       timestamp: '04/07/2026 09:15' },
+    hct:        { value: '30',         timestamp: '04/07/2026 09:15' },
+    plt:        { value: '142',        timestamp: '04/07/2026 09:15' },
+    wbc:        { value: '9.8',        timestamp: '04/07/2026 09:15' },
+    inr:        { value: '1.3',        timestamp: '04/07/2026 09:22' },
+    pt:         { value: '14.2',       timestamp: '04/07/2026 09:22' },
+    ptt:        { value: '38',         timestamp: '04/07/2026 09:22' },
+    fibrinogen: { value: '221',        timestamp: '04/07/2026 09:22' },
+    lac:        { value: '2.8',        timestamp: '04/07/2026 09:18' },
+    ica:        { value: '1.08',       timestamp: '04/07/2026 09:18' },
+    ph:         { value: '7.33',       timestamp: '04/07/2026 09:24' },
+    be:         { value: '-3.8',       timestamp: '04/07/2026 09:24' },
+    btype:      { value: 'B Positive', timestamp: '04/07/2026 09:10' },
+    hcg:        { value: 'Negative',   timestamp: '04/07/2026 09:10' },
+  },
+}
+
+// Build the initial labs for a given patient, merging template + patient values
+function buildLabsForPatient(patientId: string): LabRow[] {
+  const patientValues = PATIENT_LABS[patientId] ?? {}
+  return makeLabTemplate().map((lab) => {
+    const patientLab = patientValues[lab.key]
+    return patientLab
+      ? { ...lab, ehrValue: patientLab.value, ehrTimestamp: patientLab.timestamp }
+      : lab
+  })
+}
 
 const PANELS = ['CBC', 'Coag', 'Chemistry', 'Type & Screen', 'Viscoelastic']
 
@@ -446,7 +524,7 @@ export function OutcomeReview() {
   const [selectedCaseId, setSelectedCaseId] = useState(initialCaseId)
   const selectedCase = CASE_QUEUE.find(c => c.patientId === selectedCaseId) || CASE_QUEUE[0]
 
-  const [labs, setLabs] = useState<LabRow[]>(INITIAL_LABS)
+  const [labs, setLabs] = useState<LabRow[]>(() => buildLabsForPatient(initialCaseId))
   const [interventions, setInterventions] = useState({
     laparotomy: true,
     intubation: true,
@@ -460,6 +538,16 @@ export function OutcomeReview() {
   const [alive30Days, setAlive30Days] = useState<boolean | null>(true)
   const [neuroOutcome, setNeuroOutcome] = useState<string>('')
   const [submitAttempted, setSubmitAttempted] = useState(false)
+
+  // ── Reset all form state when patient changes ─────────────────────────────────
+  useEffect(() => {
+    setLabs(buildLabsForPatient(selectedCaseId))
+    setInterventions({ laparotomy: false, intubation: false, thoracotomy: false, reboa: false, angiography: false, txa: false, acReversal: false })
+    setMtpRecipient(false)
+    setAlive30Days(null)
+    setNeuroOutcome('')
+    setSubmitAttempted(false)
+  }, [selectedCaseId])
 
   // ── Lab handlers ─────────────────────────────────────────────────────────────
   function acceptLab(key: string) {
