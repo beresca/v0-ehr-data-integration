@@ -87,6 +87,7 @@ export function MedicQuickDoc() {
   // Selected data
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
   const [selectedProducts, setSelectedProducts] = useState<BloodProduct[]>([])
+  const [nemisisTransmitSuccess, setNemisisTransmitSuccess] = useState(false)
   
   // Manual entry form
   const [manualIncidentId, setManualIncidentId] = useState('')
@@ -1099,29 +1100,42 @@ export function MedicQuickDoc() {
           {/* Retransmit NEMSIS action */}
           <button
             onClick={() => {
+              setNemisisTransmitSuccess(true)
               addToast('NEMSIS XML retransmitted to state registry', 'success')
+              setTimeout(() => setNemisisTransmitSuccess(false), 3000)
             }}
             style={{
               width: '100%',
               marginTop: 12,
               padding: '10px 14px',
               borderRadius: 8,
-              border: '1px dashed #1B2B4B',
-              backgroundColor: '#F8FAFF',
-              color: '#1B2B4B',
+              border: nemisisTransmitSuccess ? '1px solid #22C55E' : '1px dashed #1B2B4B',
+              backgroundColor: nemisisTransmitSuccess ? '#ECFDF5' : '#F8FAFF',
+              color: nemisisTransmitSuccess ? '#22C55E' : '#1B2B4B',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8
+              gap: 8,
+              transition: 'all 0.2s'
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transition: 'transform 0.3s' }}>
+              {nemisisTransmitSuccess ? (
+                // Checkmark icon
+                <>
+                  <polyline points="20 6 9 17 4 12"/>
+                </>
+              ) : (
+                // Refresh icon
+                <>
+                  <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </>
+              )}
             </svg>
-            Retransmit NEMSIS XML
+            {nemisisTransmitSuccess ? 'Retransmitted ✓' : 'Retransmit NEMSIS XML'}
           </button>
         </section>
 
