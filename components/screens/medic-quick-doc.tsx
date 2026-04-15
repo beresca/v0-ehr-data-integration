@@ -61,9 +61,11 @@ export function MedicQuickDoc() {
   
   // Pending sync queue (for offline)
   const [pendingSync, setPendingSync] = useState<number>(0)
+  const [mounted, setMounted] = useState(false)
 
-  // Check online status
+  // Check online status + mount state
   useEffect(() => {
+    setMounted(true)
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => { setIsOnline(false); setApiConnected(false) }
     window.addEventListener('online', handleOnline)
@@ -221,6 +223,7 @@ export function MedicQuickDoc() {
 
         {incidentTab === 'api' && apiConnected ? (
           // API-fed incident list - reverse chronological with date grouping
+          mounted && (
           <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
             {/* Group by date */}
             {(() => {
@@ -370,6 +373,7 @@ export function MedicQuickDoc() {
               ))
             })()}
           </div>
+          )
         ) : (
           // Manual entry form
           <div style={{ padding: 12 }}>
