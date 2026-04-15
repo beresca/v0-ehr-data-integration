@@ -50,6 +50,7 @@ import {
 
 interface CaseRecord {
   patientId: string
+  incidentId: string
   patientName: string
   age: number
   gender: 'M' | 'F'
@@ -57,56 +58,94 @@ interface CaseRecord {
   date: string
   destination: string
   product: string
+  scannedProducts: { unitId: string; productType: string; scannedAt: string }[]
+  epcrImported: boolean
+  bloodScanned: boolean
   status: 'overdue' | 'due-today' | 'in-review' | 'complete'
   dueIn?: string
+  chief: string
+  vitals?: { sbp: number; hr: number; gcs?: number }
 }
 
 const CASE_QUEUE: CaseRecord[] = [
   {
     patientId: 'PT-2026-0892',
+    incidentId: 'INC-2026-78432',
     patientName: 'Robert Chen',
     age: 45,
     gender: 'M',
     agency: 'Miami-Dade Fire Rescue',
     date: 'Apr 8, 2026',
     destination: 'Jackson Memorial',
-    product: '2 units pRBC',
+    product: '2 units LTOWB',
+    scannedProducts: [
+      { unitId: 'W26-089234', productType: 'LTOWB', scannedAt: '2026-04-08 14:08' },
+      { unitId: 'W26-089235', productType: 'LTOWB', scannedAt: '2026-04-08 14:22' },
+    ],
+    epcrImported: true,
+    bloodScanned: true,
     status: 'overdue',
     dueIn: '12h overdue',
+    chief: 'MVC - Trauma',
+    vitals: { sbp: 72, hr: 128, gcs: 11 },
   },
   {
     patientId: 'PT-2026-0901',
+    incidentId: 'INC-2026-78398',
     patientName: 'Sarah Martinez',
     age: 32,
     gender: 'F',
     agency: 'Orange County EMS',
     date: 'Apr 10, 2026',
     destination: 'Orlando Regional',
-    product: '1 unit LTOWB',
+    product: '1 unit Plasma',
+    scannedProducts: [
+      { unitId: 'P26-112233', productType: 'Plasma', scannedAt: '2026-04-10 22:18' },
+    ],
+    epcrImported: true,
+    bloodScanned: true,
     status: 'due-today',
     dueIn: '6h remaining',
+    chief: 'Stabbing - Abdomen',
+    vitals: { sbp: 88, hr: 112, gcs: 15 },
   },
   {
     patientId: 'PT-2026-0915',
+    incidentId: 'INC-2026-78415',
     patientName: 'Marcus Thompson',
     age: 28,
     gender: 'M',
     agency: 'Hillsborough County FR',
     date: 'Apr 9, 2026',
     destination: 'Tampa General',
-    product: '1 unit LTOWB',
+    product: '1 unit pRBC',
+    scannedProducts: [
+      { unitId: 'R26-445521', productType: 'pRBC', scannedAt: '2026-04-09 11:35' },
+    ],
+    epcrImported: true,
+    bloodScanned: true,
     status: 'in-review',
+    chief: 'GSW - Chest',
+    vitals: { sbp: 64, hr: 142, gcs: 8 },
   },
   {
     patientId: 'PT-2026-0923',
+    incidentId: 'INC-2026-78301',
     patientName: 'Linda Williams',
     age: 67,
     gender: 'F',
     agency: 'Broward Sheriff Fire',
     date: 'Apr 7, 2026',
     destination: 'Memorial Regional',
-    product: '2 units Plasma',
+    product: '1 unit LTOWB',
+    scannedProducts: [
+      { unitId: 'W26-089234', productType: 'LTOWB', scannedAt: '2026-04-07 08:45' },
+    ],
+    epcrImported: true,
+    bloodScanned: true,
     status: 'complete',
+    chief: 'MVC - Ejection',
+    vitals: { sbp: 78, hr: 118, gcs: 13 },
   },
 ]
 
@@ -530,10 +569,27 @@ export function OutcomeReview() {
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {caseItem.date} &bull; {caseItem.product}
+                    {caseItem.date} &bull; {caseItem.chief}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {caseItem.agency}
+                  </div>
+                  {/* Source badges */}
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    {caseItem.epcrImported && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l2 2h3a2 2 0 012 2v12a2 2 0 01-2 2z" />
+                        </svg>
+                        ePCR
+                      </span>
+                    )}
+                    {caseItem.bloodScanned && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-700 border border-red-200">
+                        <Droplet className="w-2.5 h-2.5" />
+                        {caseItem.scannedProducts.length} unit{caseItem.scannedProducts.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
                   </div>
                   {caseItem.dueIn && (
                     <div className={cn(
@@ -587,9 +643,12 @@ export function OutcomeReview() {
         <CardContent className="pt-6">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-xl font-semibold">{selectedCase.patientName}</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold">{selectedCase.patientName}</h2>
+                <span className="font-mono text-sm opacity-70">{selectedCase.incidentId}</span>
+              </div>
               <p className="text-sm text-primary-foreground/70">
-                {selectedCase.date} &bull; {selectedCase.agency}
+                {selectedCase.date} &bull; {selectedCase.agency} &bull; {selectedCase.chief}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -613,6 +672,91 @@ export function OutcomeReview() {
               </Badge>
             </div>
           </div>
+
+          {/* Expandable ePCR + Blood Products Detail */}
+          <details className="mt-4 pt-4 border-t border-primary-foreground/20">
+            <summary className="cursor-pointer text-sm font-medium flex items-center gap-2 hover:opacity-80">
+              <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+              View ePCR Data &amp; Scanned Products
+              <div className="flex gap-1.5 ml-2">
+                {selectedCase.epcrImported && (
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/30 text-blue-100">ePCR</span>
+                )}
+                {selectedCase.bloodScanned && (
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-400/30 text-red-100">{selectedCase.scannedProducts.length} units</span>
+                )}
+              </div>
+            </summary>
+            
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {/* ePCR Data */}
+              <div className="rounded-lg bg-primary-foreground/10 p-4">
+                <h4 className="text-xs uppercase tracking-wider opacity-70 mb-3">ePCR Documentation</h4>
+                {selectedCase.epcrImported ? (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="opacity-70">Incident</span>
+                      <span className="font-mono font-medium">{selectedCase.incidentId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-70">Chief Complaint</span>
+                      <span className="font-medium">{selectedCase.chief}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-70">Patient</span>
+                      <span className="font-medium">{selectedCase.age}y {selectedCase.gender === 'M' ? 'Male' : 'Female'}</span>
+                    </div>
+                    {selectedCase.vitals && (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="opacity-70">Field SBP</span>
+                          <span className={cn('font-medium', selectedCase.vitals.sbp < 90 && 'text-red-300')}>{selectedCase.vitals.sbp} mmHg</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="opacity-70">Field HR</span>
+                          <span className={cn('font-medium', selectedCase.vitals.hr > 100 && 'text-amber-300')}>{selectedCase.vitals.hr} bpm</span>
+                        </div>
+                        {selectedCase.vitals.gcs && (
+                          <div className="flex justify-between">
+                            <span className="opacity-70">GCS</span>
+                            <span className={cn('font-medium', selectedCase.vitals.gcs < 14 && 'text-amber-300')}>{selectedCase.vitals.gcs}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm opacity-60 italic">No ePCR data imported for this incident</p>
+                )}
+              </div>
+
+              {/* Scanned Blood Products */}
+              <div className="rounded-lg bg-primary-foreground/10 p-4">
+                <h4 className="text-xs uppercase tracking-wider opacity-70 mb-3">Scanned Blood Products</h4>
+                {selectedCase.bloodScanned && selectedCase.scannedProducts.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedCase.scannedProducts.map((product) => (
+                      <div key={product.unitId} className="flex items-center justify-between text-sm bg-primary-foreground/10 rounded p-2">
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            'px-2 py-0.5 rounded text-xs font-bold',
+                            product.productType === 'LTOWB' ? 'bg-red-500 text-white' :
+                            product.productType === 'pRBC' ? 'bg-red-700 text-white' : 'bg-amber-500 text-white'
+                          )}>
+                            {product.productType}
+                          </span>
+                          <span className="font-mono font-medium">{product.unitId}</span>
+                        </div>
+                        <span className="text-xs opacity-60">{product.scannedAt}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm opacity-60 italic">No blood products scanned for this incident</p>
+                )}
+              </div>
+            </div>
+          </details>
         </CardContent>
       </Card>
 

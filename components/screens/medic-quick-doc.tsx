@@ -6,13 +6,16 @@ import { usePathname } from 'next/navigation'
 
 // Mock data - would come from ePCR API when connected
 // Sorted reverse chronological (newest first)
+// ecrImported: ePCR data has been pulled into the system
+// bloodScanned: blood products have been scanned via BloodComm
+// scannedProducts: array of product IDs already scanned for this incident
 const MOCK_INCIDENTS = [
-  { id: 'INC-2026-78432', date: '2026-04-11', time: '14:32', status: 'active', chief: 'MVC - Trauma', agency: 'Miami-Dade Fire Rescue', unit: 'R-41', patient: { age: 34, gender: 'M' } },
-  { id: 'INC-2026-78429', date: '2026-04-11', time: '13:45', status: 'active', chief: 'Fall - Head Injury', agency: 'Miami-Dade Fire Rescue', unit: 'M-22', patient: { age: 67, gender: 'F' } },
-  { id: 'INC-2026-78415', date: '2026-04-11', time: '11:20', status: 'completed', chief: 'GSW - Chest', agency: 'Broward County EMS', unit: 'M-41', patient: { age: 22, gender: 'M' } },
-  { id: 'INC-2026-78398', date: '2026-04-10', time: '22:15', status: 'completed', chief: 'Stabbing - Abdomen', agency: 'Miami-Dade Fire Rescue', unit: 'R-12', patient: { age: 28, gender: 'M' } },
-  { id: 'INC-2026-78356', date: '2026-04-10', time: '16:42', status: 'completed', chief: 'OB Hemorrhage', agency: 'Palm Beach County FR', unit: 'M-07', patient: { age: 31, gender: 'F' } },
-  { id: 'INC-2026-78301', date: '2026-04-09', time: '08:23', status: 'completed', chief: 'MVC - Ejection', agency: 'Orange County EMS', unit: 'R-33', patient: { age: 45, gender: 'M' } },
+  { id: 'INC-2026-78432', date: '2026-04-11', time: '14:32', status: 'active', chief: 'MVC - Trauma', agency: 'Miami-Dade Fire Rescue', unit: 'R-41', patient: { age: 34, gender: 'M' }, epcrImported: true, bloodScanned: true, scannedProducts: ['W26-089234', 'W26-089235'], patientId: 'PT-2026-0892' },
+  { id: 'INC-2026-78429', date: '2026-04-11', time: '13:45', status: 'active', chief: 'Fall - Head Injury', agency: 'Miami-Dade Fire Rescue', unit: 'M-22', patient: { age: 67, gender: 'F' }, epcrImported: true, bloodScanned: false, scannedProducts: [], patientId: null },
+  { id: 'INC-2026-78415', date: '2026-04-11', time: '11:20', status: 'completed', chief: 'GSW - Chest', agency: 'Broward County EMS', unit: 'M-41', patient: { age: 22, gender: 'M' }, epcrImported: true, bloodScanned: true, scannedProducts: ['R26-445521'], patientId: 'PT-2026-0915' },
+  { id: 'INC-2026-78398', date: '2026-04-10', time: '22:15', status: 'completed', chief: 'Stabbing - Abdomen', agency: 'Miami-Dade Fire Rescue', unit: 'R-12', patient: { age: 28, gender: 'M' }, epcrImported: true, bloodScanned: true, scannedProducts: ['P26-112233'], patientId: 'PT-2026-0901' },
+  { id: 'INC-2026-78356', date: '2026-04-10', time: '16:42', status: 'completed', chief: 'OB Hemorrhage', agency: 'Palm Beach County FR', unit: 'M-07', patient: { age: 31, gender: 'F' }, epcrImported: false, bloodScanned: false, scannedProducts: [], patientId: null },
+  { id: 'INC-2026-78301', date: '2026-04-09', time: '08:23', status: 'completed', chief: 'MVC - Ejection', agency: 'Orange County EMS', unit: 'R-33', patient: { age: 45, gender: 'M' }, epcrImported: true, bloodScanned: true, scannedProducts: ['W26-089234'], patientId: 'PT-2026-0923' },
 ]
 
 // Mock data - would come from Delta BloodComm API when connected
@@ -275,8 +278,8 @@ export function MedicQuickDoc() {
                       
                       {/* Main content */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {/* Top row: ID + Status */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                        {/* Top row: ID + Status + Badges */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
                           <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14, color: '#1B2B4B' }}>
                             {incident.id}
                           </span>
@@ -292,6 +295,44 @@ export function MedicQuickDoc() {
                           }}>
                             {incident.status}
                           </span>
+                          {/* ePCR Imported Badge */}
+                          {incident.epcrImported && (
+                            <span style={{
+                              fontSize: 9,
+                              padding: '2px 6px',
+                              borderRadius: 3,
+                              backgroundColor: '#EFF6FF',
+                              color: '#1D4ED8',
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 3
+                            }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l2 2h3a2 2 0 012 2v12a2 2 0 01-2 2z" />
+                              </svg>
+                              ePCR
+                            </span>
+                          )}
+                          {/* Blood Scanned Badge */}
+                          {incident.bloodScanned && (
+                            <span style={{
+                              fontSize: 9,
+                              padding: '2px 6px',
+                              borderRadius: 3,
+                              backgroundColor: '#FEF2F2',
+                              color: '#DC2626',
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 3
+                            }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C12 2 6 9 6 14a6 6 0 1012 0c0-5-6-12-6-12z" />
+                              </svg>
+                              {incident.scannedProducts?.length || 0} unit{(incident.scannedProducts?.length || 0) !== 1 ? 's' : ''}
+                            </span>
+                          )}
                         </div>
                         
                         {/* Chief complaint - prominent */}
