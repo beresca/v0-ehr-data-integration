@@ -23,7 +23,7 @@ import {
 const navItems = [
   { href: '/', label: 'Field Documentation', icon: FileText },
   { href: '/outcomes', label: 'Outcome Review', icon: ClipboardCheck },
-  { href: '/dashboard', label: 'PI Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'PI Review', icon: LayoutDashboard },
   { href: '/registry', label: 'Program Analytics', icon: Database },
 ]
 

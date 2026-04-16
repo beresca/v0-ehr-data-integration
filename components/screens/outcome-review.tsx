@@ -554,7 +554,9 @@ export function OutcomeReview() {
     acReversal: false,
   })
   const [mtpRecipient, setMtpRecipient] = useState(false)
-  const [alive30Days, setAlive30Days] = useState<boolean | null>(true)
+  const [reactionReported, setReactionReported] = useState(selectedCase.transfusionReaction?.reported ?? false)
+  const [reactionType, setReactionType] = useState(selectedCase.transfusionReaction?.type ?? '')
+  const [reactionSeverity, setReactionSeverity] = useState(selectedCase.transfusionReaction?.severity ?? '')
   const [neuroOutcome, setNeuroOutcome] = useState<string>('')
   const [submitAttempted, setSubmitAttempted] = useState(false)
 
@@ -563,7 +565,9 @@ export function OutcomeReview() {
     setLabs(buildLabsForPatient(selectedCaseId))
     setInterventions({ laparotomy: false, intubation: false, thoracotomy: false, reboa: false, angiography: false, txa: false, acReversal: false })
     setMtpRecipient(false)
-    setAlive30Days(null)
+    setReactionReported(false)
+    setReactionType('')
+    setReactionSeverity('')
     setNeuroOutcome('')
     setSubmitAttempted(false)
   }, [selectedCaseId])
@@ -600,8 +604,7 @@ export function OutcomeReview() {
   const canSubmit =
     criticalUnresolved.length === 0 &&
     ehrUnreviewed.length === 0 &&
-    neuroOutcome !== '' &&
-    alive30Days !== null
+    neuroOutcome !== ''
 
   const blockingIssues = [
     ...criticalUnresolved.map((l) => ({
@@ -621,16 +624,15 @@ export function OutcomeReview() {
       message: `${l.test} has no value entered`,
     })),
     ...(neuroOutcome === '' ? [{ type: 'warning' as const, message: 'Neurological outcome is required' }] : []),
-    ...(alive30Days === null ? [{ type: 'warning' as const, message: '30-day survival status is required' }] : []),
   ]
 
-  const survivalMilestones = [
-    { label: 'Hospital Arrival', time: '0hr', complete: true },
-    { label: '6 hr', time: '6hr', complete: true },
-    { label: '24 hr', time: '24hr', complete: true },
-    { label: '72 hr', time: '72hr', complete: true },
-    { label: '30 days', time: '30d', complete: false },
-  ]
+  const [survivalMilestones, setSurvivalMilestones] = useState([
+    { label: 'Hospital Arrival', time: '0hr', complete: true, fixed: true },
+    { label: '6 hr', time: '6hr', complete: true, fixed: false },
+    { label: '24 hr', time: '24hr', complete: true, fixed: false },
+    { label: '72 hr', time: '72hr', complete: true, fixed: false },
+    { label: '30 days', time: '30d', complete: false, fixed: false },
+  ])
 
   // Summary counts for header pills
   const criticalCount = labs.filter((l) => { const s = getStatus(l); return s === 'critical-low' || s === 'critical-high' }).length
@@ -961,7 +963,10 @@ export function OutcomeReview() {
       {/* SEMSTAR Survival */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold">SEMSTAR Survival</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold">SEMSTAR Survival</CardTitle>
+            <span className="text-xs text-muted-foreground">Click a milestone to toggle</span>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
@@ -974,16 +979,38 @@ export function OutcomeReview() {
                       survivalMilestones[index - 1].complete ? 'bg-green-400' : 'bg-border'
                     )} />
                   )}
-                  <div className={cn(
-                    'flex h-10 w-10 items-center justify-center rounded-full border-2',
-                    milestone.complete
-                      ? 'border-green-400 bg-green-400 text-white'
-                      : 'border-border bg-muted text-muted-foreground'
-                  )}>
-                    {milestone.complete
-                      ? <CheckCircle className="h-5 w-5" />
-                      : <span className="text-xs font-medium">{milestone.time}</span>}
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          disabled={milestone.fixed}
+                          onClick={() => {
+                            if (milestone.fixed) return
+                            setSurvivalMilestones(prev => prev.map((m, i) => i === index ? { ...m, complete: !m.complete } : m))
+                          }}
+                          className={cn(
+                            'flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all',
+                            milestone.fixed ? 'cursor-default' : 'cursor-pointer hover:scale-110',
+                            milestone.complete
+                              ? 'border-green-400 bg-green-400 text-white'
+                              : 'border-border bg-muted text-muted-foreground hover:border-green-300'
+                          )}
+                        >
+                          {milestone.complete
+                            ? <CheckCircle className="h-5 w-5" />
+                            : <span className="text-xs font-medium">{milestone.time}</span>}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {milestone.fixed
+                          ? 'Hospital arrival — always recorded'
+                          : milestone.complete
+                            ? `Patient alive at ${milestone.label} — click to mark deceased`
+                            : `Patient deceased by ${milestone.label} — click to mark alive`}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <span className={cn(
                   'mt-2 text-xs',
@@ -998,48 +1025,73 @@ export function OutcomeReview() {
       </Card>
 
       {/* Transfusion Reaction */}
-      <Card className={cn(selectedCase.transfusionReaction?.reported && "border-amber-500/50 bg-amber-50/30")}>
+      <Card className={cn(reactionReported && "border-amber-500/50 bg-amber-50/30")}>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               Transfusion Reaction
-              {selectedCase.transfusionReaction?.reported && (
+              {reactionReported && (
                 <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-100">
                   <AlertTriangle className="h-3 w-3 mr-1" />
                   Reported
                 </Badge>
               )}
             </CardTitle>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Reaction occurred</span>
+              <Switch checked={reactionReported} onCheckedChange={setReactionReported} />
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {selectedCase.transfusionReaction?.reported ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground text-xs">Reaction Type</Label>
-                  <p className="font-medium">{selectedCase.transfusionReaction.type}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Severity</Label>
-                  <Badge variant={selectedCase.transfusionReaction.severity === 'Severe' ? 'destructive' : selectedCase.transfusionReaction.severity === 'Moderate' ? 'default' : 'secondary'}>
-                    {selectedCase.transfusionReaction.severity}
-                  </Badge>
-                </div>
+        {reactionReported && (
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Reaction Type</Label>
+                <Select value={reactionType} onValueChange={setReactionType}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Febrile">Febrile (FNHTR)</SelectItem>
+                    <SelectItem value="Allergic">Allergic</SelectItem>
+                    <SelectItem value="TRALI">TRALI</SelectItem>
+                    <SelectItem value="TACO">TACO</SelectItem>
+                    <SelectItem value="Hemolytic-Acute">Hemolytic – Acute</SelectItem>
+                    <SelectItem value="Hemolytic-Delayed">Hemolytic – Delayed</SelectItem>
+                    <SelectItem value="Septic">Septic</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="text-xs text-muted-foreground pt-2 border-t">
-                This case will be flagged in cohort reports and can be filtered for QI review.
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Severity</Label>
+                <Select value={reactionSeverity} onValueChange={setReactionSeverity}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select severity" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Mild">Mild</SelectItem>
+                    <SelectItem value="Moderate">Moderate</SelectItem>
+                    <SelectItem value="Severe">Severe</SelectItem>
+                    <SelectItem value="Life-threatening">Life-threatening</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs text-muted-foreground">Unit(s) Implicated</Label>
+                <Select>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select unit" /></SelectTrigger>
+                  <SelectContent>
+                    {selectedCase.scannedProducts.map(p => (
+                      <SelectItem key={p.unitId} value={p.unitId}>{p.unitId} ({p.productType})</SelectItem>
+                    ))}
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">No transfusion reaction reported</p>
-              <Button variant="outline" size="sm" className="text-xs">
-                Report Reaction
-              </Button>
+            <div className="text-xs text-muted-foreground pt-2 border-t">
+              This case will be flagged in cohort reports and can be filtered for QI review.
             </div>
-          )}
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
       {/* Hospital Interventions */}
@@ -1088,46 +1140,18 @@ export function OutcomeReview() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base font-semibold">Trauma Registry & Manual Entry</CardTitle>
+              <CardTitle className="text-base font-semibold">Registry &amp; Manual Entry</CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                NTDB, ITDX, and fields not available via FHIR interface
+                Fields sourced from trauma registry integration or entered manually if unavailable via FHIR
               </p>
             </div>
-            <Badge variant="outline" className="text-xs">Manual Entry Required</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Hospital Clinical Metrics - NTDB/ITDX */}
+          {/* Blood Typing & Compatibility */}
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              Hospital Clinical Metrics
-              <Badge variant="secondary" className="text-[10px] font-normal">NTDB/ITDX</Badge>
-            </h4>
+            <h4 className="text-sm font-semibold">Blood Typing &amp; Compatibility</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Initial Hemoglobin (g/dL)</Label>
-                <Input type="number" step="0.1" placeholder="e.g., 12.5" className="h-9" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Initial Ionized Calcium (mmol/L)</Label>
-                <Input type="number" step="0.01" placeholder="e.g., 1.15" className="h-9" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Initial Platelets (K/uL)</Label>
-                <Input type="number" placeholder="e.g., 250" className="h-9" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">INR</Label>
-                <Input type="number" step="0.1" placeholder="e.g., 1.2" className="h-9" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Initial Lactate (mmol/L)</Label>
-                <Input type="number" step="0.1" placeholder="e.g., 2.5" className="h-9" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Base Deficit</Label>
-                <Input type="number" step="0.1" placeholder="e.g., -4" className="h-9" />
-              </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Blood Type</Label>
                 <Select>
@@ -1151,17 +1175,6 @@ export function OutcomeReview() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">TEG</Label>
-                <Select>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="abnormal">Abnormal</SelectItem>
-                    <SelectItem value="not-done">Not Done</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Antibodies Present</Label>
                 <Select>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
@@ -1169,6 +1182,17 @@ export function OutcomeReview() {
                     <SelectItem value="yes">Yes</SelectItem>
                     <SelectItem value="no">No</SelectItem>
                     <SelectItem value="unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">TEG</Label>
+                <Select>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="abnormal">Abnormal</SelectItem>
+                    <SelectItem value="not-done">Not Done</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1190,12 +1214,9 @@ export function OutcomeReview() {
             </div>
           </div>
 
-          {/* Additional Blood Products - NTDB */}
+          {/* Additional Blood Products */}
           <div className="space-y-3 pt-2 border-t">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              Additional Blood Products (First 4 Hours)
-              <Badge variant="secondary" className="text-[10px] font-normal">NTDB</Badge>
-            </h4>
+            <h4 className="text-sm font-semibold">Additional Blood Products (First 4 Hours)</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">pRBC Units</Label>
@@ -1220,54 +1241,23 @@ export function OutcomeReview() {
             </div>
           </div>
 
-          {/* Survival Timepoints - New Fields */}
+          {/* Injury Severity Score */}
           <div className="space-y-3 pt-2 border-t">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              Survival Timepoints
-              <Badge className="text-[10px] font-normal bg-blue-100 text-blue-700 hover:bg-blue-100">New Field</Badge>
-            </h4>
+            <h4 className="text-sm font-semibold">Injury Severity Score (ISS) by Body Region</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Alive at 6 hours', key: 'alive6h' },
-                { label: 'Alive at 12 hours', key: 'alive12h' },
-                { label: 'Alive at 24 hours', key: 'alive24h' },
-                { label: 'Alive at 72 hours', key: 'alive72h' },
-              ].map(item => (
-                <div key={item.key} className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">{item.label}</Label>
-                  <Select>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
-                      <SelectItem value="unknown">Unknown</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Injury Severity Scoring - NTDB */}
-          <div className="space-y-3 pt-2 border-t">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              Injury Severity Score (ISS) by Body Region
-              <Badge variant="secondary" className="text-[10px] font-normal">NTDB</Badge>
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {['Head', 'Face', 'Neck', 'Chest', 'Abdomen', 'Spine', 'Upper Extremity', 'Lower Extremity'].map(region => (
                 <div key={region} className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">{region} (AIS 0-6)</Label>
+                  <Label className="text-xs text-muted-foreground">{region} (AIS 0–6)</Label>
                   <Select>
                     <SelectTrigger className="h-9"><SelectValue placeholder="0" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0">0 - No injury</SelectItem>
-                      <SelectItem value="1">1 - Minor</SelectItem>
-                      <SelectItem value="2">2 - Moderate</SelectItem>
-                      <SelectItem value="3">3 - Serious</SelectItem>
-                      <SelectItem value="4">4 - Severe</SelectItem>
-                      <SelectItem value="5">5 - Critical</SelectItem>
-                      <SelectItem value="6">6 - Unsurvivable</SelectItem>
+                      <SelectItem value="0">0 – No injury</SelectItem>
+                      <SelectItem value="1">1 – Minor</SelectItem>
+                      <SelectItem value="2">2 – Moderate</SelectItem>
+                      <SelectItem value="3">3 – Serious</SelectItem>
+                      <SelectItem value="4">4 – Severe</SelectItem>
+                      <SelectItem value="5">5 – Critical</SelectItem>
+                      <SelectItem value="6">6 – Unsurvivable</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1280,12 +1270,9 @@ export function OutcomeReview() {
             </div>
           </div>
 
-          {/* Cause of Death - New Fields */}
+          {/* Mortality Details */}
           <div className="space-y-3 pt-2 border-t">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              Mortality Details (if applicable)
-              <Badge className="text-[10px] font-normal bg-blue-100 text-blue-700 hover:bg-blue-100">New Field</Badge>
-            </h4>
+            <h4 className="text-sm font-semibold">Mortality Details (if applicable)</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Date/Time of Death</Label>
@@ -1334,32 +1321,6 @@ export function OutcomeReview() {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label className={cn(submitAttempted && alive30Days === null ? 'text-red-600' : '')}>
-              Alive at 30 days <span className="text-red-500">*</span>
-            </Label>
-            <div className="flex gap-2">
-              {[
-                { value: true, label: 'Yes' },
-                { value: false, label: 'No' },
-                { value: null, label: 'Unknown' },
-              ].map((option) => (
-                <button
-                  key={String(option.value)}
-                  type="button"
-                  onClick={() => setAlive30Days(option.value)}
-                  className={cn(
-                    'flex-1 rounded-md border px-4 py-2.5 text-sm font-medium transition-all',
-                    alive30Days === option.value
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border hover:border-primary/50 hover:bg-muted'
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </CardContent>
       </Card>
 
