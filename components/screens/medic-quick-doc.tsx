@@ -87,7 +87,6 @@ export function MedicQuickDoc() {
   // Selected data
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
   const [selectedProducts, setSelectedProducts] = useState<BloodProduct[]>([])
-  const [nemisisTransmitSuccess, setNemisisTransmitSuccess] = useState(false)
   
   // Manual entry form
   const [manualIncidentId, setManualIncidentId] = useState('')
@@ -646,55 +645,130 @@ export function MedicQuickDoc() {
             <div style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Pre-filled from BloodComm — tap to deselect
             </div>
-            {selectedProducts.map((product) => {
-              const isSelected = true
-              const isScanned = !('manual' in product) && !!(product as typeof MOCK_BLOOD_PRODUCTS[0]).scannedAt
-              return (
+            {selectedProducts.map((product) => (
+              <div
+                key={product.unitId}
+                style={{
+                  ...card,
+                  padding: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  border: '2px solid #22C55E',
+                  backgroundColor: 'rgba(34, 197, 94, 0.04)',
+                  width: '100%'
+                }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>
+                  ✓
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14 }}>{product.unitId}</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, backgroundColor: product.productType === 'LTOWB' ? '#DC2626' : product.productType === 'pRBC' ? '#B91C1C' : '#1B2B4B', color: '#fff', fontWeight: 600 }}>
+                      {product.productType}
+                    </span>
+                    <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 3, backgroundColor: '#ECFDF5', color: '#065F46', fontWeight: 700, border: '1px solid #6EE7B7', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      Scanned
+                    </span>
+                  </div>
+                  {'scannedAt' in product && (
+                    <>
+                      <div style={{ fontSize: 11, color: '#6B7280' }}>
+                        Exp: {(product as typeof MOCK_BLOOD_PRODUCTS[0]).expiry} &nbsp;•&nbsp; {(product as typeof MOCK_BLOOD_PRODUCTS[0]).temp}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>
+                        Scanned: {(product as typeof MOCK_BLOOD_PRODUCTS[0]).scannedAt}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {/* Delete button */}
                 <button
-                  key={product.unitId}
-                  onClick={() => toggleProduct(product)}
+                  onClick={() => {
+                    if (confirm(`Remove ${product.unitId} from this record?`)) {
+                      setSelectedProducts(prev => prev.filter(p => p.unitId !== product.unitId))
+                      addToast(`Removed ${product.unitId}`, 'warning')
+                    }
+                  }}
                   style={{
-                    ...card,
-                    padding: 12,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    border: '1px solid #FCA5A5',
+                    backgroundColor: '#FEF2F2',
+                    color: '#DC2626',
+                    fontSize: 14,
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 12,
-                    border: '2px solid #22C55E',
-                    backgroundColor: 'rgba(34, 197, 94, 0.04)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    width: '100%'
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}
+                  title="Remove product"
                 >
-                  <div style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>
-                    ✓
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14 }}>{product.unitId}</span>
-                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, backgroundColor: product.productType === 'LTOWB' ? '#DC2626' : product.productType === 'pRBC' ? '#B91C1C' : '#1B2B4B', color: '#fff', fontWeight: 600 }}>
-                        {product.productType}
-                      </span>
-                      {/* Scanned badge */}
-                      <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 3, backgroundColor: '#ECFDF5', color: '#065F46', fontWeight: 700, border: '1px solid #6EE7B7', display: 'flex', alignItems: 'center', gap: 3 }}>
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                        Scanned
-                      </span>
-                    </div>
-                    {'scannedAt' in product && (
-                      <>
-                        <div style={{ fontSize: 11, color: '#6B7280' }}>
-                          Exp: {(product as typeof MOCK_BLOOD_PRODUCTS[0]).expiry} &nbsp;•&nbsp; {(product as typeof MOCK_BLOOD_PRODUCTS[0]).temp}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>
-                          Scanned: {(product as typeof MOCK_BLOOD_PRODUCTS[0]).scannedAt}
-                        </div>
-                      </>
-                    )}
-                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                  </svg>
                 </button>
+              </div>
+            ))}
+
+            {/* Available scanned units not yet linked */}
+            {(() => {
+              const availableUnits = MOCK_BLOOD_PRODUCTS.filter(
+                p => !selectedProducts.some(sp => sp.unitId === p.unitId)
               )
-            })}
+              if (availableUnits.length === 0) return null
+              return (
+                <>
+                  <div style={{ padding: '12px 4px 6px', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Available Scanned Units
+                  </div>
+                  {availableUnits.map((product) => (
+                    <button
+                      key={product.unitId}
+                      onClick={() => {
+                        setSelectedProducts(prev => [...prev, product])
+                        addToast(`Added ${product.unitId} (${product.productType})`, 'success')
+                      }}
+                      style={{
+                        ...card,
+                        padding: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        border: '1px dashed #D1D5DB',
+                        backgroundColor: '#fff',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        width: '100%'
+                      }}
+                    >
+                      <div style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #D1D5DB', backgroundColor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', fontSize: 18, fontWeight: 700, flexShrink: 0 }}>
+                        +
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14 }}>{product.unitId}</span>
+                          <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, backgroundColor: product.productType === 'LTOWB' ? '#DC2626' : product.productType === 'pRBC' ? '#B91C1C' : '#1B2B4B', color: '#fff', fontWeight: 600 }}>
+                            {product.productType}
+                          </span>
+                          <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 3, backgroundColor: '#FFFBEB', color: '#92400E', fontWeight: 700, border: '1px solid #FCD34D' }}>
+                            Not linked
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 11, color: '#6B7280' }}>
+                          Exp: {product.expiry} &nbsp;•&nbsp; {product.temp}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )
+            })()}
+
             {/* Add additional unit */}
             <div style={{ marginTop: 8, ...card, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -1030,172 +1104,41 @@ export function MedicQuickDoc() {
               onClick={() => setView('products')}
               style={{ fontSize: 12, color: '#1B2B4B', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
             >
-              Add
+              Edit
             </button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {selectedProducts.map(p => (
-              <div key={p.unitId} style={{
+              <span key={p.unitId} style={{
+                padding: '6px 10px',
+                borderRadius: 6,
+                backgroundColor: '#F3F4F6',
+                fontFamily: 'monospace',
+                fontSize: 12,
+                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 12px',
-                borderRadius: 8,
-                backgroundColor: '#F9FAFB',
-                border: '1px solid #E5E7EB'
+                gap: 6
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{
-                    padding: '3px 8px',
-                    borderRadius: 4,
-                    backgroundColor: p.productType === 'LTOWB' ? '#DC2626' : p.productType === 'pRBC' ? '#B91C1C' : '#1B2B4B',
-                    color: '#fff',
-                    fontSize: 10,
-                    fontWeight: 700
-                  }}>
-                    {p.productType}
-                  </span>
-                  <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: '#374151' }}>
-                    {p.unitId}
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    if (confirm(`Remove ${p.unitId} from this record?\n\nThis will require retransmitting the NEMSIS XML.`)) {
-                      setSelectedProducts(prev => prev.filter(prod => prod.unitId !== p.unitId))
-                      addToast(`Removed ${p.unitId} — retransmit NEMSIS to update registry`, 'warning')
-                    }
-                  }}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 6,
-                    border: '1px solid #E5E7EB',
-                    backgroundColor: '#fff',
-                    color: '#9CA3AF',
-                    fontSize: 14,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.15s'
-                  }}
-                  onMouseOver={(e) => { e.currentTarget.style.borderColor = '#EF4444'; e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.backgroundColor = '#FEF2F2' }}
-                  onMouseOut={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.color = '#9CA3AF'; e.currentTarget.style.backgroundColor = '#fff' }}
-                  title="Remove product"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                  </svg>
-                </button>
-              </div>
+                <span style={{
+                  padding: '2px 5px',
+                  borderRadius: 3,
+                  backgroundColor: p.productType === 'LTOWB' ? '#DC2626' : p.productType === 'pRBC' ? '#B91C1C' : '#1B2B4B',
+                  color: '#fff',
+                  fontSize: 9,
+                  fontWeight: 700
+                }}>
+                  {p.productType}
+                </span>
+                {p.unitId}
+              </span>
             ))}
             {selectedProducts.length === 0 && (
-              <div style={{ padding: 16, textAlign: 'center', color: '#9CA3AF', fontSize: 13 }}>
-                No blood products added
+              <div style={{ padding: 12, textAlign: 'center', color: '#9CA3AF', fontSize: 13, width: '100%' }}>
+                No blood products — <button onClick={() => setView('products')} style={{ color: '#1B2B4B', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>add products</button>
               </div>
             )}
           </div>
-
-          {/* Available units to add — show scanned units not yet selected */}
-          {(() => {
-            const availableUnits = MOCK_BLOOD_PRODUCTS.filter(
-              p => !selectedProducts.some(sp => sp.unitId === p.unitId)
-            )
-            if (availableUnits.length === 0) return null
-            return (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
-                  Available Scanned Units
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {availableUnits.map(p => (
-                    <button
-                      key={p.unitId}
-                      onClick={() => {
-                        setSelectedProducts(prev => [...prev, p])
-                        addToast(`Added ${p.unitId} (${p.productType})`, 'success')
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '10px 12px',
-                        borderRadius: 8,
-                        backgroundColor: '#fff',
-                        border: '1px dashed #D1D5DB',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        width: '100%',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: 4,
-                          backgroundColor: p.productType === 'LTOWB' ? '#DC2626' : p.productType === 'pRBC' ? '#B91C1C' : '#1B2B4B',
-                          color: '#fff',
-                          fontSize: 10,
-                          fontWeight: 700
-                        }}>
-                          {p.productType}
-                        </span>
-                        <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: '#374151' }}>
-                          {p.unitId}
-                        </span>
-                        <span style={{ fontSize: 11, color: '#9CA3AF' }}>
-                          Exp: {p.expiry}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: 20, color: '#22C55E', fontWeight: 700 }}>+</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )
-          })()}
-
-          {/* Retransmit NEMSIS action */}
-          <button
-            onClick={() => {
-              setNemisisTransmitSuccess(true)
-              addToast('NEMSIS XML retransmitted to state registry', 'success')
-              setTimeout(() => setNemisisTransmitSuccess(false), 3000)
-            }}
-            style={{
-              width: '100%',
-              marginTop: 12,
-              padding: '10px 14px',
-              borderRadius: 8,
-              border: nemisisTransmitSuccess ? '1px solid #22C55E' : '1px dashed #1B2B4B',
-              backgroundColor: nemisisTransmitSuccess ? '#ECFDF5' : '#F8FAFF',
-              color: nemisisTransmitSuccess ? '#22C55E' : '#1B2B4B',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              transition: 'all 0.2s'
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transition: 'transform 0.3s' }}>
-              {nemisisTransmitSuccess ? (
-                // Checkmark icon
-                <>
-                  <polyline points="20 6 9 17 4 12"/>
-                </>
-              ) : (
-                // Refresh icon
-                <>
-                  <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </>
-              )}
-            </svg>
-            {nemisisTransmitSuccess ? 'Retransmitted ✓' : 'Retransmit NEMSIS XML'}
-          </button>
         </section>
 
         {/* Indication */}
