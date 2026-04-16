@@ -743,7 +743,7 @@ export function OutcomeReview() {
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {caseItem.date} {caseItem.time} &bull; {caseItem.chief}
+                    {caseItem.date} &bull; {caseItem.chief}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {caseItem.agency}
