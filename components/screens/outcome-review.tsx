@@ -792,15 +792,30 @@ export function OutcomeReview() {
       {/* Header Card */}
       <Card className="bg-primary text-primary-foreground">
         <CardContent className="pt-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold">{selectedCase.patientName}</h2>
-                <span className="font-mono text-sm opacity-70">{selectedCase.incidentId}</span>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl font-semibold">{selectedCase.patientName}</h2>
+                  <span className="font-mono text-sm opacity-70">{selectedCase.incidentId}</span>
+                </div>
+                <p className="text-sm text-primary-foreground/70 mt-0.5 flex flex-wrap gap-x-2">
+                  <span>{selectedCase.date}</span>
+                  <span>{selectedCase.time}</span>
+                  <span>&bull; {selectedCase.agency}</span>
+                  <span>&bull; {selectedCase.chief}</span>
+                </p>
               </div>
-  <p className="text-sm text-primary-foreground/70">
-    {selectedCase.date} {selectedCase.time} &bull; {selectedCase.agency} &bull; {selectedCase.chief}
-  </p>
+              <Badge className={cn(
+                'text-white shrink-0',
+                selectedCase.status === 'overdue' ? 'bg-red-500' :
+                selectedCase.status === 'due-today' ? 'bg-amber-500' :
+                selectedCase.status === 'in-review' ? 'bg-blue-500' : 'bg-green-500'
+              )}>
+                <Clock className="mr-1 h-3 w-3" />
+                {getStatusLabel(selectedCase.status)}
+                {selectedCase.dueIn && ` (${selectedCase.dueIn})`}
+              </Badge>
             </div>
             <div className="flex flex-wrap gap-2">
               <Badge className="bg-primary-foreground/20 text-primary-foreground">
@@ -810,16 +825,6 @@ export function OutcomeReview() {
               <Badge className="bg-primary-foreground/20 text-primary-foreground">
                 <MapPin className="mr-1 h-3 w-3" />
                 {selectedCase.destination}
-              </Badge>
-              <Badge className={cn(
-                'text-white',
-                selectedCase.status === 'overdue' ? 'bg-red-500' :
-                selectedCase.status === 'due-today' ? 'bg-amber-500' :
-                selectedCase.status === 'in-review' ? 'bg-blue-500' : 'bg-green-500'
-              )}>
-                <Clock className="mr-1 h-3 w-3" />
-                {getStatusLabel(selectedCase.status)}
-                {selectedCase.dueIn && ` (${selectedCase.dueIn})`}
               </Badge>
             </div>
           </div>
