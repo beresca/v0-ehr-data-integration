@@ -767,7 +767,12 @@ export function CohortReview() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => setSelectedAgency(row.agency)}
                   >
-                    <TableCell className="font-medium text-primary">{row.agency}</TableCell>
+                    <TableCell>
+                      <span className="font-medium text-blue-600 underline underline-offset-2 decoration-blue-300 hover:text-blue-800 hover:decoration-blue-600 transition-colors flex items-center gap-1.5">
+                        {row.agency}
+                        <ChevronRight className="h-3.5 w-3.5 text-blue-400" />
+                      </span>
+                    </TableCell>
                     <TableCell className="text-right">{row.cases}</TableCell>
                     <TableCell className="text-right">{row.completion}%</TableCell>
                     <TableCell className="text-right">{row.responseTime}</TableCell>
