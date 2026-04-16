@@ -1083,6 +1083,234 @@ export function OutcomeReview() {
         </CardContent>
       </Card>
 
+      {/* Registry / Manual Entry Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Trauma Registry & Manual Entry</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                NTDB, ITDX, and fields not available via FHIR interface
+              </p>
+            </div>
+            <Badge variant="outline" className="text-xs">Manual Entry Required</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Hospital Clinical Metrics - NTDB/ITDX */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              Hospital Clinical Metrics
+              <Badge variant="secondary" className="text-[10px] font-normal">NTDB/ITDX</Badge>
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Initial Hemoglobin (g/dL)</Label>
+                <Input type="number" step="0.1" placeholder="e.g., 12.5" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Initial Ionized Calcium (mmol/L)</Label>
+                <Input type="number" step="0.01" placeholder="e.g., 1.15" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Initial Platelets (K/uL)</Label>
+                <Input type="number" placeholder="e.g., 250" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">INR</Label>
+                <Input type="number" step="0.1" placeholder="e.g., 1.2" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Initial Lactate (mmol/L)</Label>
+                <Input type="number" step="0.1" placeholder="e.g., 2.5" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Base Deficit</Label>
+                <Input type="number" step="0.1" placeholder="e.g., -4" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Blood Type</Label>
+                <Select>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">A</SelectItem>
+                    <SelectItem value="B">B</SelectItem>
+                    <SelectItem value="AB">AB</SelectItem>
+                    <SelectItem value="O">O</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Rh Status</Label>
+                <Select>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="positive">Positive</SelectItem>
+                    <SelectItem value="negative">Negative</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">TEG</Label>
+                <Select>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="abnormal">Abnormal</SelectItem>
+                    <SelectItem value="not-done">Not Done</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Antibodies Present</Label>
+                <Select>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Yes</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">hCG (Qualitative)</Label>
+                <Select>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="positive">Positive</SelectItem>
+                    <SelectItem value="negative">Negative</SelectItem>
+                    <SelectItem value="not-done">Not Done</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">hCG (Quantitative)</Label>
+                <Input type="number" placeholder="mIU/mL" className="h-9" />
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Blood Products - NTDB */}
+          <div className="space-y-3 pt-2 border-t">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              Additional Blood Products (First 4 Hours)
+              <Badge variant="secondary" className="text-[10px] font-normal">NTDB</Badge>
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">pRBC Units</Label>
+                <Input type="number" placeholder="0" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Whole Blood Units</Label>
+                <Input type="number" placeholder="0" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Plasma Units</Label>
+                <Input type="number" placeholder="0" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Platelet Units</Label>
+                <Input type="number" placeholder="0" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Cryoprecipitate Units</Label>
+                <Input type="number" placeholder="0" className="h-9" />
+              </div>
+            </div>
+          </div>
+
+          {/* Survival Timepoints - New Fields */}
+          <div className="space-y-3 pt-2 border-t">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              Survival Timepoints
+              <Badge className="text-[10px] font-normal bg-blue-100 text-blue-700 hover:bg-blue-100">New Field</Badge>
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Alive at 6 hours', key: 'alive6h' },
+                { label: 'Alive at 12 hours', key: 'alive12h' },
+                { label: 'Alive at 24 hours', key: 'alive24h' },
+                { label: 'Alive at 72 hours', key: 'alive72h' },
+              ].map(item => (
+                <div key={item.key} className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">{item.label}</Label>
+                  <Select>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes</SelectItem>
+                      <SelectItem value="no">No</SelectItem>
+                      <SelectItem value="unknown">Unknown</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Injury Severity Scoring - NTDB */}
+          <div className="space-y-3 pt-2 border-t">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              Injury Severity Score (ISS) by Body Region
+              <Badge variant="secondary" className="text-[10px] font-normal">NTDB</Badge>
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {['Head', 'Face', 'Neck', 'Chest', 'Abdomen', 'Spine', 'Upper Extremity', 'Lower Extremity'].map(region => (
+                <div key={region} className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">{region} (AIS 0-6)</Label>
+                  <Select>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="0" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0 - No injury</SelectItem>
+                      <SelectItem value="1">1 - Minor</SelectItem>
+                      <SelectItem value="2">2 - Moderate</SelectItem>
+                      <SelectItem value="3">3 - Serious</SelectItem>
+                      <SelectItem value="4">4 - Severe</SelectItem>
+                      <SelectItem value="5">5 - Critical</SelectItem>
+                      <SelectItem value="6">6 - Unsurvivable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-4 pt-2">
+              <Label className="text-sm font-medium">Calculated ISS:</Label>
+              <span className="text-lg font-bold text-primary">--</span>
+              <span className="text-xs text-muted-foreground">(Auto-calculated from top 3 body regions)</span>
+            </div>
+          </div>
+
+          {/* Cause of Death - New Fields */}
+          <div className="space-y-3 pt-2 border-t">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              Mortality Details (if applicable)
+              <Badge className="text-[10px] font-normal bg-blue-100 text-blue-700 hover:bg-blue-100">New Field</Badge>
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Date/Time of Death</Label>
+                <Input type="datetime-local" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Days Until Death After Arrival</Label>
+                <Input type="number" placeholder="Days" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Death Attributed to Hemorrhage</Label>
+                <Select>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Yes</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Outcome */}
       <Card>
         <CardHeader className="pb-4">
