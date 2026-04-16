@@ -130,14 +130,14 @@ const savedCohorts = [
   { id: 'c4', name: 'Non-survivors Review', patients: 24, created: 'Feb 10, 2026', filters: ['Outcome: Deceased', 'All indications'] },
 ]
 
-// Meeting notes
+// Meeting notes — linked to cohorts by ID
 const meetingNotes = [
   {
     id: 'm1',
     date: 'Apr 10, 2026',
     title: 'Q1 Review - Miami-Dade Fire Rescue',
     attendees: ['Dr. Sarah Chen (Medical Director)', 'Chief Marcus Thompson', 'Blood Bank: Lisa Park'],
-    cohort: 'Trauma SI > 1.0',
+    cohortId: 'c1', // Trauma SI > 1.0
     summary: 'Reviewed 12 high-acuity trauma cases. Identified opportunity to reduce scene time for penetrating trauma. Action: Update protocol to mandate departure within 5 min for GSW/stab wounds.',
     nextSteps: ['Draft protocol revision by Apr 20', 'Schedule training for May shifts', 'Follow-up meeting: May 15'],
   },
@@ -146,7 +146,7 @@ const meetingNotes = [
     date: 'Mar 28, 2026',
     title: 'Blood Bank Coordination - OneBlood',
     attendees: ['OneBlood: Jennifer Martinez', 'FL DOH: Program Team', 'Hospital Liaisons (6)'],
-    cohort: null,
+    cohortId: null, // General meeting, not tied to a cohort
     summary: 'Quarterly sync on inventory and wastage. LTOWB wastage down 15% from Q4. Discussed expansion to 3 additional agencies in Q2.',
     nextSteps: ['Finalize MOU for new agencies', 'Update cold chain monitoring SOP', 'Next meeting: Jun 28'],
   },
@@ -155,9 +155,27 @@ const meetingNotes = [
     date: 'Mar 15, 2026',
     title: 'Non-survivor Case Review',
     attendees: ['Dr. James Wilson (Trauma Surgery)', 'EMS Medical Directors (4)', 'QI Coordinators'],
-    cohort: 'Non-survivors Review',
+    cohortId: 'c4', // Non-survivors Review
     summary: 'Deep dive on 8 non-survivor cases. 3 cases had delayed recognition of hemorrhagic shock. 2 cases had cold chain deviations. Recommended enhanced vital sign trending in ePCR.',
     nextSteps: ['ImageTrend to add SI auto-calculate', 'Develop shock recognition CBT module', 'Schedule individual agency follow-ups'],
+  },
+  {
+    id: 'm4',
+    date: 'Feb 22, 2026',
+    title: 'GI Bleed Protocol Discussion',
+    attendees: ['Dr. Robert Kim (GI)', 'Tampa General ED: Dr. Amy Foster', 'Hillsborough FR: Chief Davis'],
+    cohortId: 'c2', // GI Bleed - LTOWB
+    summary: 'Reviewed GI bleed cases receiving LTOWB. Discussed timing of transfusion initiation. Agreed on SI > 1.0 threshold for earlier activation.',
+    nextSteps: ['Update triage criteria', 'Create quick reference card', 'Follow-up in 60 days'],
+  },
+  {
+    id: 'm5',
+    date: 'Feb 8, 2026',
+    title: 'OB Hemorrhage Case Series',
+    attendees: ['Dr. Maria Santos (OB-GYN)', 'Orlando Health: L&D Team', 'Orange County FR: Capt. Williams'],
+    cohortId: 'c3', // OB Hemorrhage Q1
+    summary: 'Reviewed Q1 postpartum hemorrhage cases. All 3 patients survived. Discussed earlier activation criteria and coordination with receiving L&D units.',
+    nextSteps: ['Develop OB-specific checklist', 'Hospital notification protocol update', 'Next review: May'],
   },
 ]
 
@@ -454,8 +472,12 @@ export function CohortReview() {
             <Badge variant="secondary">{(cohortPatientsMap[selectedCohort] || []).length} patients</Badge>
           </div>
 
+          {/* Patient Table */}
           <Card>
-            <CardContent className="pt-5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Patients</CardTitle>
+            </CardHeader>
+            <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -490,6 +512,77 @@ export function CohortReview() {
               </Table>
             </CardContent>
           </Card>
+
+          {/* Cohort Meeting Notes */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Meeting Notes for this Cohort</CardTitle>
+                <Button size="sm" variant="outline" className="gap-2" onClick={() => { setMeetingCohort(selectedCohort); setShowNewMeeting(true) }}>
+                  <Plus className="h-4 w-4" />
+                  Add Note
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const cohortMeetings = meetingNotes.filter(m => m.cohortId === selectedCohort)
+                if (cohortMeetings.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No meeting notes yet for this cohort</p>
+                      <Button size="sm" variant="link" className="mt-1" onClick={() => { setMeetingCohort(selectedCohort); setShowNewMeeting(true) }}>
+                        Document a meeting
+                      </Button>
+                    </div>
+                  )
+                }
+                return (
+                  <div className="space-y-4">
+                    {cohortMeetings.map(meeting => (
+                      <div key={meeting.id} className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="font-semibold">{meeting.title}</h4>
+                            <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{meeting.date}</span>
+                              <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{meeting.attendees.length} attendees</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Attendees</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {meeting.attendees.map(a => (
+                                <Badge key={a} variant="secondary" className="text-xs font-normal">{a}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Summary</p>
+                            <p className="text-sm">{meeting.summary}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Next Steps</p>
+                            <ul className="text-sm space-y-1">
+                              {meeting.nextSteps.map((step, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <ChevronRight className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                                  {step}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -520,12 +613,12 @@ export function CohortReview() {
                     <Input value={meetingAttendees} onChange={e => setMeetingAttendees(e.target.value)} placeholder="Names and roles, separated by commas" className="mt-1" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Related Cohort (optional)</label>
+                    <label className="text-sm font-medium">Related Cohort</label>
                     <Select value={meetingCohort} onValueChange={setMeetingCohort}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="Select a cohort" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {savedCohorts.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                        <SelectItem value="none">No specific cohort (general meeting)</SelectItem>
+                        {savedCohorts.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -554,7 +647,7 @@ export function CohortReview() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{meeting.title}</h3>
-                        {meeting.cohort && <Badge variant="outline" className="text-xs">{meeting.cohort}</Badge>}
+                        {meeting.cohortId && <Badge variant="outline" className="text-xs">{savedCohorts.find(c => c.id === meeting.cohortId)?.name || meeting.cohortId}</Badge>}
                       </div>
                       <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{meeting.date}</span>
