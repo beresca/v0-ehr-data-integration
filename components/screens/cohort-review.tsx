@@ -58,6 +58,8 @@ import {
 } from '@/components/ui/chart'
 import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts'
 import { EPCRViewer } from '@/components/epcr-viewer'
+import Link from 'next/link'
+import { ExternalLink, ChevronLeft } from 'lucide-react'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -117,11 +119,28 @@ const agencyData = [
   { agency: 'Hillsborough County Fire Rescue', cases: 32, completion: 96, responseTime: '8.2 min', quality: 98 },
   { agency: 'Miami-Dade Fire Rescue', cases: 28, completion: 88, responseTime: '9.1 min', quality: 87 },
   { agency: 'Orange County Fire Rescue', cases: 24, completion: 78, responseTime: '8.5 min', quality: 76 },
-  { agency: 'Broward Sheriff Fire Rescue', cases: 22, completion: 94, responseTime: '7.8 min', quality: 92 },
-  { agency: 'Palm Beach County Fire Rescue', cases: 18, completion: 91, responseTime: '8.0 min', quality: 89 },
-  { agency: 'Pinellas County EMS', cases: 16, completion: 100, responseTime: '6.9 min', quality: 99 },
-  { agency: 'Duval County Fire Rescue', cases: 12, completion: 83, responseTime: '9.4 min', quality: 81 },
+  { agency: 'Broward County Fire Rescue', cases: 18, completion: 92, responseTime: '7.8 min', quality: 94 },
 ]
+
+// Mock patients by agency
+const agencyPatientsMap: Record<string, Array<{ id: string; age: number; sex: string; indication: string; date: string; product: string; si: number; outcome: string }>> = {
+  'Hillsborough County Fire Rescue': [
+    { id: 'P-2026-0892', age: 34, sex: 'M', indication: 'Hemorrhagic shock', date: '04/08/2026', product: 'LTOWB', si: 1.78, outcome: 'Survived' },
+    { id: 'P-2026-0845', age: 67, sex: 'F', indication: 'GI Bleed', date: '04/02/2026', product: 'pRBC', si: 1.42, outcome: 'Survived' },
+    { id: 'P-2026-0801', age: 22, sex: 'M', indication: 'Trauma - GSW', date: '03/28/2026', product: 'LTOWB', si: 2.1, outcome: 'Deceased' },
+  ],
+  'Miami-Dade Fire Rescue': [
+    { id: 'P-2026-0756', age: 45, sex: 'M', indication: 'Hemorrhagic shock', date: '03/25/2026', product: 'LTOWB', si: 1.65, outcome: 'Survived' },
+    { id: 'P-2026-0712', age: 58, sex: 'F', indication: 'Trauma - MVC', date: '03/18/2026', product: 'pRBC', si: 1.38, outcome: 'Survived' },
+  ],
+  'Orange County Fire Rescue': [
+    { id: 'P-2026-0688', age: 41, sex: 'M', indication: 'Hemorrhagic shock', date: '03/12/2026', product: 'LTOWB', si: 1.92, outcome: 'Survived' },
+  ],
+  'Broward County Fire Rescue': [
+    { id: 'P-2026-0634', age: 29, sex: 'F', indication: 'Postpartum hemorrhage', date: '03/05/2026', product: 'pRBC', si: 1.55, outcome: 'Survived' },
+    { id: 'P-2026-0598', age: 52, sex: 'M', indication: 'Trauma - Fall', date: '02/28/2026', product: 'LTOWB', si: 1.48, outcome: 'Survived' },
+  ],
+}
 
 // Saved cohorts
 const savedCohorts = [
@@ -236,6 +255,7 @@ export function CohortReview() {
   const [showNewMeeting, setShowNewMeeting] = useState(false)
   const [selectedPatientForEPCR, setSelectedPatientForEPCR] = useState<string | null>(null)
   const [recordTab, setRecordTab] = useState<'ePCR' | 'Outcomes'>('ePCR')
+  const [selectedAgency, setSelectedAgency] = useState<string | null>(null)
 
   // Cohort builder state
   const [cohortName, setCohortName] = useState('')
@@ -713,77 +733,159 @@ export function CohortReview() {
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold">Agency Performance — Florida</CardTitle>
-            <Badge variant="outline" className="text-xs">{agencyData.length} agencies</Badge>
+            <div className="flex items-center gap-2">
+              {selectedAgency && (
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedAgency(null)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <CardTitle className="text-base font-semibold">
+                {selectedAgency ? selectedAgency : 'Agency Performance — Florida'}
+              </CardTitle>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {selectedAgency ? `${agencyPatientsMap[selectedAgency]?.length ?? 0} patients` : `${agencyData.length} agencies`}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Agency</TableHead>
-                <TableHead className="text-right">Cases (YTD)</TableHead>
-                <TableHead className="text-right">Completion rate</TableHead>
-                <TableHead className="text-right">Avg response time</TableHead>
-                <TableHead className="text-right">Data quality score</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {agencyData.map((row) => (
-                <TableRow key={row.agency}>
-                  <TableCell className="font-medium">{row.agency}</TableCell>
-                  <TableCell className="text-right">{row.cases}</TableCell>
-                  <TableCell className="text-right">{row.completion}%</TableCell>
-                  <TableCell className="text-right">{row.responseTime}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className={cn('h-2 w-2 rounded-full', getQualityDot(row.quality))} />
-                      {row.quality}%
-                    </div>
-                  </TableCell>
+          {!selectedAgency ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Agency</TableHead>
+                  <TableHead className="text-right">Cases (YTD)</TableHead>
+                  <TableHead className="text-right">Completion rate</TableHead>
+                  <TableHead className="text-right">Avg response time</TableHead>
+                  <TableHead className="text-right">Data quality score</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {agencyData.map((row) => (
+                  <TableRow
+                    key={row.agency}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedAgency(row.agency)}
+                  >
+                    <TableCell className="font-medium text-primary">{row.agency}</TableCell>
+                    <TableCell className="text-right">{row.cases}</TableCell>
+                    <TableCell className="text-right">{row.completion}%</TableCell>
+                    <TableCell className="text-right">{row.responseTime}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className={cn('h-2 w-2 rounded-full', getQualityDot(row.quality))} />
+                        {row.quality}%
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Patient ID</TableHead>
+                  <TableHead>Age/Sex</TableHead>
+                  <TableHead>Indication</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead>SI</TableHead>
+                  <TableHead>Outcome</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(agencyPatientsMap[selectedAgency] ?? []).map((p) => (
+                  <TableRow
+                    key={p.id}
+                    className={cn('cursor-pointer hover:bg-muted/50', selectedPatientForEPCR === p.id && 'bg-muted/60')}
+                    onClick={() => { setSelectedPatientForEPCR(p.id); setRecordTab('ePCR') }}
+                  >
+                    <TableCell className="font-medium text-primary">{p.id}</TableCell>
+                    <TableCell>{p.age}{p.sex}</TableCell>
+                    <TableCell>{p.indication}</TableCell>
+                    <TableCell>{p.date}</TableCell>
+                    <TableCell>{p.product}</TableCell>
+                    <TableCell className={cn(p.si >= 1.4 && 'text-destructive font-semibold')}>{p.si}</TableCell>
+                    <TableCell>
+                      <Badge variant={p.outcome === 'Survived' ? 'default' : 'destructive'} className={p.outcome === 'Survived' ? 'bg-success text-success-foreground' : ''}>
+                        {p.outcome}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={(e) => { e.stopPropagation(); setSelectedPatientForEPCR(p.id); setRecordTab('ePCR') }}
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                        <Link href={`/outcomes?patient=${p.id}`} onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs">
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                        </Link>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
       {/* Inline Patient Record Panel */}
       {selectedPatientForEPCR && (
         <div className="fixed inset-y-0 right-0 z-40 flex w-full max-w-2xl flex-col border-l bg-background shadow-2xl">
-          {/* Panel Header */}
-          <div className="flex items-center justify-between border-b px-5 py-4">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Patient Record</p>
-              <h3 className="font-semibold">{selectedPatientForEPCR}</h3>
+          {/* Panel Header - Fixed */}
+          <div className="shrink-0 border-b bg-background">
+            <div className="flex items-center justify-between px-5 py-4">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Patient Record</p>
+                <h3 className="font-semibold">{selectedPatientForEPCR}</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link href={`/outcomes?patient=${selectedPatientForEPCR}`}>
+                  <Button variant="outline" size="sm" className="text-xs">
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    Edit in Outcome Review
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="icon" onClick={() => setSelectedPatientForEPCR(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setSelectedPatientForEPCR(null)}>
-              <X className="h-4 w-4" />
-            </Button>
+
+            {/* Panel Tabs - Fixed */}
+            <div className="flex border-t">
+              {['ePCR', 'Outcomes'].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setRecordTab(tab as 'ePCR' | 'Outcomes')}
+                  className={cn(
+                    'flex-1 py-2.5 text-sm font-medium transition-colors',
+                    recordTab === tab
+                      ? 'border-b-2 border-primary text-primary bg-muted/30'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Panel Tabs */}
-          <div className="flex border-b">
-            {['ePCR', 'Outcomes'].map(tab => (
-              <button
-                key={tab}
-                onClick={() => setRecordTab(tab as 'ePCR' | 'Outcomes')}
-                className={cn(
-                  'flex-1 py-2.5 text-sm font-medium transition-colors',
-                  recordTab === tab
-                    ? 'border-b-2 border-primary text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {/* Panel Content */}
+          {/* Panel Content - Scrollable */}
           <div className="flex-1 overflow-y-auto">
             {recordTab === 'ePCR' ? (
-              <EPCRViewer patientId={selectedPatientForEPCR} />
+              <EPCRViewer patientId={selectedPatientForEPCR} compact />
             ) : (
               <div className="space-y-4 p-5">
                 {/* Outcome Summary — read-only view of documented outcomes */}
@@ -811,7 +913,7 @@ export function CohortReview() {
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Hospital Outcomes</h4>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div><span className="text-muted-foreground">Neurological Outcome</span><p className="font-medium mt-0.5">Full recovery</p></div>
-                    <div><span className="text-muted-foreground">Transfusion Reaction</span><p className="font-medium mt-0.5 text-amber-600">Febrile – Mild</p></div>
+                    <div><span className="text-muted-foreground">Transfusion Reaction</span><p className="font-medium mt-0.5 text-amber-600">Febrile - Mild</p></div>
                     <div><span className="text-muted-foreground">MTP Recipient</span><p className="font-medium mt-0.5">No</p></div>
                     <div><span className="text-muted-foreground">ISS</span><p className="font-medium mt-0.5">22</p></div>
                   </div>
@@ -826,9 +928,12 @@ export function CohortReview() {
                   </div>
                 </div>
 
-                <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-                  Outcome data is documented in Outcome Review by hospital POC. This view is read-only.
-                </div>
+                <Link href={`/outcomes?patient=${selectedPatientForEPCR}`} className="block">
+                  <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-between">
+                    <span>Outcome data is documented in Outcome Review by hospital POC.</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </div>
+                </Link>
               </div>
             )}
           </div>

@@ -370,8 +370,158 @@ export function EPCRViewer({ patientId, compact = false }: EPCRViewerProps) {
     </div>
   )
 
+  if (compact) {
+    // Compact mode: no Card wrapper, simpler header
+    return (
+      <div className="bg-background">
+        <div className="sticky top-0 z-10 bg-background border-b px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="font-semibold text-sm">ePCR Documentation</span>
+            </div>
+            <Badge variant="outline" className="text-xs">NEMSIS 3.5</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {data.response.incidentId} &bull; {data.response.emsAgency}
+          </p>
+        </div>
+        <div className="divide-y">
+          {/* ePatient */}
+          <Section id="patient" title="Patient Information" icon={User} badge="ePatient">
+            <div className="grid grid-cols-2 gap-x-4">
+              <DataRow label="Age" value={`${data.patient.age} years`} nemsisId="ePatient.15" />
+              <DataRow label="Gender" value={data.patient.gender === 'M' ? 'Male' : 'Female'} nemsisId="ePatient.25" />
+              {data.patient.weight && (
+                <DataRow label="Weight" value={`${data.patient.weight} kg`} nemsisId="eExam.01" />
+              )}
+            </div>
+          </Section>
+
+          {/* eTimes */}
+          <Section id="times" title="Response Times" icon={Clock} badge="eTimes">
+            <div className="grid grid-cols-2 gap-x-4">
+              <DataRow label="Incident Date" value={data.times.incidentDate} nemsisId="eTimes.03" />
+              {data.times.psapCallTime && <DataRow label="PSAP Call" value={data.times.psapCallTime} nemsisId="eTimes.01" />}
+              {data.times.dispatchTime && <DataRow label="Dispatch" value={data.times.dispatchTime} nemsisId="eTimes.02" />}
+              {data.times.enRouteTime && <DataRow label="En Route" value={data.times.enRouteTime} nemsisId="eTimes.05" />}
+              {data.times.arrivalTime && <DataRow label="Scene Arrival" value={data.times.arrivalTime} nemsisId="eTimes.06" />}
+              {data.times.patientContactTime && <DataRow label="Patient Contact" value={data.times.patientContactTime} nemsisId="eTimes.07" />}
+              {data.times.departureTime && <DataRow label="Scene Departure" value={data.times.departureTime} nemsisId="eTimes.09" />}
+              {data.times.hospitalArrivalTime && <DataRow label="Hospital Arrival" value={data.times.hospitalArrivalTime} nemsisId="eTimes.11" />}
+            </div>
+          </Section>
+
+          {/* eSituation */}
+          <Section id="situation" title="Situation" icon={Stethoscope} badge="eSituation">
+            <div className="space-y-1">
+              <DataRow label="Chief Complaint" value={data.situation.chiefComplaint} nemsisId="eSituation.04" />
+              {data.situation.providerPrimaryImpression && (
+                <DataRow label="Primary Impression" value={data.situation.providerPrimaryImpression} nemsisId="eSituation.11" />
+              )}
+              {data.situation.causeOfInjury && (
+                <DataRow label="Cause of Injury" value={data.situation.causeOfInjury} />
+              )}
+            </div>
+          </Section>
+
+          {/* eInjury */}
+          {data.injury && (
+            <Section id="injury" title="Injury Details" icon={AlertTriangle} badge="eInjury">
+              <div className="grid grid-cols-2 gap-x-4">
+                {data.injury.traumaCriteria && <DataRow label="Trauma Criteria" value={data.injury.traumaCriteria} nemsisId="eInjury.01" />}
+                {data.injury.mechanism && <DataRow label="Mechanism" value={data.injury.mechanism} />}
+                {data.injury.vehicleImpactArea && <DataRow label="Impact Area" value={data.injury.vehicleImpactArea} />}
+                {data.injury.useOfSeatbelt !== undefined && <DataRow label="Seatbelt" value={data.injury.useOfSeatbelt ? 'Yes' : 'No'} />}
+                {data.injury.airbagDeployment !== undefined && <DataRow label="Airbag Deployed" value={data.injury.airbagDeployment ? 'Yes' : 'No'} />}
+              </div>
+            </Section>
+          )}
+
+          {/* eVitals */}
+          <Section id="vitals" title="Vital Signs" icon={Activity} badge={`${data.vitals.length} sets`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="pb-2 pr-2 font-medium">Time</th>
+                    <th className="pb-2 pr-2 font-medium">SBP</th>
+                    <th className="pb-2 pr-2 font-medium">HR</th>
+                    <th className="pb-2 pr-2 font-medium">RR</th>
+                    <th className="pb-2 pr-2 font-medium">SpO2</th>
+                    <th className="pb-2 pr-2 font-medium">GCS</th>
+                    <th className="pb-2 font-medium">SI</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {data.vitals.map((v, i) => (
+                    <tr key={i} className={cn(v.shockIndex >= 1.4 && 'bg-red-50')}>
+                      <td className="py-1.5 pr-2 font-medium">{v.timestamp}<span className="text-muted-foreground ml-1 font-normal">{v.label}</span></td>
+                      <td className={cn('py-1.5 pr-2', v.sbp < 90 && 'text-red-600 font-semibold')}>{v.sbp}/{v.dbp}</td>
+                      <td className={cn('py-1.5 pr-2', v.hr > 120 && 'text-amber-600 font-semibold')}>{v.hr}</td>
+                      <td className="py-1.5 pr-2">{v.respiratoryRate}</td>
+                      <td className={cn('py-1.5 pr-2', v.pulseOx < 94 && 'text-amber-600 font-semibold')}>{v.pulseOx}%</td>
+                      <td className={cn('py-1.5 pr-2', v.gcs < 13 && 'text-amber-600 font-semibold')}>{v.gcs}</td>
+                      <td className={cn('py-1.5 font-semibold', v.shockIndex >= 1.4 ? 'text-red-600' : v.shockIndex >= 1.0 ? 'text-amber-600' : 'text-green-600')}>{v.shockIndex.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+
+          {/* eProcedures */}
+          <Section id="procedures" title="Procedures" icon={Clipboard} badge={`${data.procedures.length}`}>
+            <div className="space-y-1">
+              {data.procedures.map((p, i) => (
+                <div key={i} className="flex items-center justify-between text-sm py-0.5">
+                  <span>{p.procedure}</span>
+                  <span className="text-muted-foreground text-xs">{p.timestamp}</span>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* eMedications */}
+          <Section id="medications" title="Medications" icon={Syringe} badge={`${data.medications.length}`}>
+            <div className="space-y-1">
+              {data.medications.map((m, i) => (
+                <div key={i} className="flex items-center justify-between text-sm py-0.5">
+                  <span>{m.medication} {m.dose}{m.doseUnit} {m.route}</span>
+                  <span className="text-muted-foreground text-xs">{m.timestamp}</span>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* Blood Products */}
+          <Section id="bloodProducts" title="Blood Products" icon={Droplet} badge={`${data.bloodProducts.length} units`}>
+            <div className="space-y-2">
+              {data.bloodProducts.map((bp, i) => (
+                <div key={i} className="rounded border p-2 bg-red-50/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-red-600">{bp.productType}</Badge>
+                      <span className="font-mono text-sm">{bp.unitId}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{bp.route} ({bp.ivGauge})</span>
+                  </div>
+                  <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
+                    <span>Scanned: {bp.scannedAt.split(' ')[1]}</span>
+                    {bp.startTime && <span className="text-green-600">Start: {bp.startTime}</span>}
+                    {bp.stopTime && <span className="text-amber-600">Stop: {bp.stopTime}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <Card className={cn(!compact && "max-h-[80vh] overflow-auto")}>
+    <Card className="max-h-[80vh] overflow-auto">
       <CardHeader className="pb-2 sticky top-0 bg-card z-10 border-b">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
