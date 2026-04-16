@@ -56,15 +56,17 @@ interface CaseRecord {
   gender: 'M' | 'F'
   agency: string
   date: string
+  time: string // Run time
   destination: string
   product: string
-  scannedProducts: { unitId: string; productType: string; scannedAt: string }[]
+  scannedProducts: { unitId: string; productType: string; scannedAt: string; startTime?: string; stopTime?: string }[]
   epcrImported: boolean
   bloodScanned: boolean
   status: 'overdue' | 'due-today' | 'in-review' | 'complete'
   dueIn?: string
   chief: string
   vitals?: { sbp: number; hr: number; gcs?: number }
+  transfusionReaction?: { reported: boolean; type?: string; severity?: string }
 }
 
 const CASE_QUEUE: CaseRecord[] = [
@@ -76,11 +78,12 @@ const CASE_QUEUE: CaseRecord[] = [
     gender: 'M',
     agency: 'Miami-Dade Fire Rescue',
     date: 'Apr 8, 2026',
+    time: '13:42',
     destination: 'Jackson Memorial',
     product: '2 units LTOWB',
     scannedProducts: [
-      { unitId: 'W26-089234', productType: 'LTOWB', scannedAt: '2026-04-08 14:08' },
-      { unitId: 'W26-089235', productType: 'LTOWB', scannedAt: '2026-04-08 14:22' },
+      { unitId: 'W26-089234', productType: 'LTOWB', scannedAt: '2026-04-08 14:08', startTime: '14:12', stopTime: '14:28' },
+      { unitId: 'W26-089235', productType: 'LTOWB', scannedAt: '2026-04-08 14:22', startTime: '14:30' },
     ],
     epcrImported: true,
     bloodScanned: true,
@@ -88,6 +91,7 @@ const CASE_QUEUE: CaseRecord[] = [
     dueIn: '12h overdue',
     chief: 'MVC - Trauma',
     vitals: { sbp: 72, hr: 128, gcs: 11 },
+    transfusionReaction: { reported: true, type: 'Febrile', severity: 'Mild' },
   },
   {
     patientId: 'PT-2026-0901',
@@ -97,10 +101,11 @@ const CASE_QUEUE: CaseRecord[] = [
     gender: 'F',
     agency: 'Orange County EMS',
     date: 'Apr 10, 2026',
+    time: '22:05',
     destination: 'Orlando Regional',
     product: '1 unit Plasma',
     scannedProducts: [
-      { unitId: 'P26-112233', productType: 'Plasma', scannedAt: '2026-04-10 22:18' },
+      { unitId: 'P26-112233', productType: 'Plasma', scannedAt: '2026-04-10 22:18', startTime: '22:24', stopTime: '22:45' },
     ],
     epcrImported: true,
     bloodScanned: true,
@@ -117,10 +122,11 @@ const CASE_QUEUE: CaseRecord[] = [
     gender: 'M',
     agency: 'Hillsborough County FR',
     date: 'Apr 9, 2026',
+    time: '11:18',
     destination: 'Tampa General',
     product: '1 unit pRBC',
     scannedProducts: [
-      { unitId: 'R26-445521', productType: 'pRBC', scannedAt: '2026-04-09 11:35' },
+      { unitId: 'R26-445521', productType: 'pRBC', scannedAt: '2026-04-09 11:35', startTime: '11:42' },
     ],
     epcrImported: true,
     bloodScanned: true,
@@ -136,10 +142,11 @@ const CASE_QUEUE: CaseRecord[] = [
     gender: 'F',
     agency: 'Broward Sheriff Fire',
     date: 'Apr 7, 2026',
+    time: '08:22',
     destination: 'Memorial Regional',
     product: '1 unit LTOWB',
     scannedProducts: [
-      { unitId: 'W26-089234', productType: 'LTOWB', scannedAt: '2026-04-07 08:45' },
+      { unitId: 'W26-089234', productType: 'LTOWB', scannedAt: '2026-04-07 08:45', startTime: '08:52', stopTime: '09:15' },
     ],
     epcrImported: true,
     bloodScanned: true,
@@ -522,7 +529,15 @@ export function OutcomeReview() {
   const searchParams = useSearchParams()
   const initialCaseId = searchParams.get('id') || CASE_QUEUE.find(c => c.status !== 'complete')?.patientId || CASE_QUEUE[0].patientId
   const [selectedCaseId, setSelectedCaseId] = useState(initialCaseId)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'overdue' | 'due-today' | 'complete'>('pending')
   const selectedCase = CASE_QUEUE.find(c => c.patientId === selectedCaseId) || CASE_QUEUE[0]
+  
+  // Filter cases based on status filter
+  const filteredCases = CASE_QUEUE.filter(c => {
+    if (statusFilter === 'all') return true
+    if (statusFilter === 'pending') return c.status !== 'complete'
+    return c.status === statusFilter
+  })
 
   const [labs, setLabs] = useState<LabRow[]>(() => buildLabsForPatient(initialCaseId))
   const [interventions, setInterventions] = useState({
@@ -631,27 +646,39 @@ export function OutcomeReview() {
 
   return (
     <div className="space-y-6">
-      {/* Overview Statistics */}
+      {/* Overview Statistics — clickable to filter */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <Card className="col-span-1">
+        <Card 
+          className={cn("col-span-1 cursor-pointer transition-all hover:border-primary/50", statusFilter === 'pending' && "ring-2 ring-primary border-primary")}
+          onClick={() => setStatusFilter(s => s === 'pending' ? 'all' : 'pending')}
+        >
           <CardContent className="pt-4 pb-3">
             <div className="text-2xl font-bold">{hospitalStats.pendingReviews}</div>
             <div className="text-xs text-muted-foreground">Pending Reviews</div>
           </CardContent>
         </Card>
-        <Card className={cn("col-span-1", hospitalStats.overdueCount > 0 && "border-destructive/50 bg-destructive/5")}>
+        <Card 
+          className={cn("col-span-1 cursor-pointer transition-all hover:border-primary/50", hospitalStats.overdueCount > 0 && "border-destructive/50 bg-destructive/5", statusFilter === 'overdue' && "ring-2 ring-destructive")}
+          onClick={() => setStatusFilter(s => s === 'overdue' ? 'all' : 'overdue')}
+        >
           <CardContent className="pt-4 pb-3">
             <div className={cn("text-2xl font-bold", hospitalStats.overdueCount > 0 && "text-destructive")}>{hospitalStats.overdueCount}</div>
             <div className="text-xs text-muted-foreground">Overdue</div>
           </CardContent>
         </Card>
-        <Card className={cn("col-span-1", hospitalStats.dueTodayCount > 0 && "border-amber-500/50 bg-amber-50")}>
+        <Card 
+          className={cn("col-span-1 cursor-pointer transition-all hover:border-primary/50", hospitalStats.dueTodayCount > 0 && "border-amber-500/50 bg-amber-50", statusFilter === 'due-today' && "ring-2 ring-amber-500")}
+          onClick={() => setStatusFilter(s => s === 'due-today' ? 'all' : 'due-today')}
+        >
           <CardContent className="pt-4 pb-3">
             <div className={cn("text-2xl font-bold", hospitalStats.dueTodayCount > 0 && "text-amber-600")}>{hospitalStats.dueTodayCount}</div>
             <div className="text-xs text-muted-foreground">Due Today</div>
           </CardContent>
         </Card>
-        <Card className="col-span-1">
+        <Card 
+          className={cn("col-span-1 cursor-pointer transition-all hover:border-primary/50", statusFilter === 'complete' && "ring-2 ring-green-500")}
+          onClick={() => setStatusFilter(s => s === 'complete' ? 'all' : 'complete')}
+        >
           <CardContent className="pt-4 pb-3">
             <div className="text-2xl font-bold text-green-600">{hospitalStats.completedThisMonth}</div>
             <div className="text-xs text-muted-foreground">Completed (Apr)</div>
@@ -671,15 +698,22 @@ export function OutcomeReview() {
         </Card>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6 min-w-0">
         {/* Case List Sidebar */}
-        <div className="w-80 shrink-0">
-          <div className="sticky top-4 space-y-3">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1">
-              Pending Reviews ({hospitalStats.pendingReviews})
-            </h2>
+        <div className="w-full lg:w-72 lg:shrink-0">
+          <div className="lg:sticky lg:top-4 space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                {statusFilter === 'all' ? 'All Cases' : statusFilter === 'pending' ? 'Pending Reviews' : statusFilter === 'overdue' ? 'Overdue' : statusFilter === 'due-today' ? 'Due Today' : 'Completed'} ({filteredCases.length})
+              </h2>
+              {statusFilter !== 'all' && (
+                <button onClick={() => setStatusFilter('all')} className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                  Show all
+                </button>
+              )}
+            </div>
           <div className="space-y-2">
-            {CASE_QUEUE.filter(c => c.status !== 'complete').map((caseItem) => (
+            {filteredCases.map((caseItem) => (
               <button
                 key={caseItem.patientId}
                 onClick={() => setSelectedCaseId(caseItem.patientId)}
@@ -730,6 +764,12 @@ export function OutcomeReview() {
                         {caseItem.scannedProducts.length} unit{caseItem.scannedProducts.length !== 1 ? 's' : ''}
                       </span>
                     )}
+                    {caseItem.transfusionReaction?.reported && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        Reaction
+                      </span>
+                    )}
                   </div>
                   {caseItem.dueIn && (
                     <div className={cn(
@@ -743,53 +783,39 @@ export function OutcomeReview() {
               </button>
             ))}
           </div>
-
-          {/* Completed cases collapsed */}
-          <details className="group">
-            <summary className="text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground px-1 py-2">
-              Completed ({CASE_QUEUE.filter(c => c.status === 'complete').length})
-            </summary>
-            <div className="space-y-2 mt-2">
-              {CASE_QUEUE.filter(c => c.status === 'complete').map((caseItem) => (
-                <button
-                  key={caseItem.patientId}
-                  onClick={() => setSelectedCaseId(caseItem.patientId)}
-                  className={cn(
-                    'w-full text-left p-3 rounded-lg border transition-all opacity-60',
-                    selectedCaseId === caseItem.patientId
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50'
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                    <span className="font-mono text-sm">{caseItem.patientId}</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1 pl-5">
-                    {caseItem.patientName} &bull; {caseItem.date}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </details>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 max-w-4xl space-y-6">
+      <div className="flex-1 min-w-0 space-y-6">
 
       {/* Header Card */}
       <Card className="bg-primary text-primary-foreground">
         <CardContent className="pt-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold">{selectedCase.patientName}</h2>
-                <span className="font-mono text-sm opacity-70">{selectedCase.incidentId}</span>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl font-semibold">{selectedCase.patientName}</h2>
+                  <span className="font-mono text-sm opacity-70">{selectedCase.incidentId}</span>
+                </div>
+                <p className="text-sm text-primary-foreground/70 mt-0.5 flex flex-wrap gap-x-2">
+                  <span>{selectedCase.date}</span>
+                  <span>{selectedCase.time}</span>
+                  <span>&bull; {selectedCase.agency}</span>
+                  <span>&bull; {selectedCase.chief}</span>
+                </p>
               </div>
-              <p className="text-sm text-primary-foreground/70">
-                {selectedCase.date} &bull; {selectedCase.agency} &bull; {selectedCase.chief}
-              </p>
+              <Badge className={cn(
+                'text-white shrink-0',
+                selectedCase.status === 'overdue' ? 'bg-red-500' :
+                selectedCase.status === 'due-today' ? 'bg-amber-500' :
+                selectedCase.status === 'in-review' ? 'bg-blue-500' : 'bg-green-500'
+              )}>
+                <Clock className="mr-1 h-3 w-3" />
+                {getStatusLabel(selectedCase.status)}
+                {selectedCase.dueIn && ` (${selectedCase.dueIn})`}
+              </Badge>
             </div>
             <div className="flex flex-wrap gap-2">
               <Badge className="bg-primary-foreground/20 text-primary-foreground">
@@ -799,16 +825,6 @@ export function OutcomeReview() {
               <Badge className="bg-primary-foreground/20 text-primary-foreground">
                 <MapPin className="mr-1 h-3 w-3" />
                 {selectedCase.destination}
-              </Badge>
-              <Badge className={cn(
-                'text-white',
-                selectedCase.status === 'overdue' ? 'bg-red-500' :
-                selectedCase.status === 'due-today' ? 'bg-amber-500' :
-                selectedCase.status === 'in-review' ? 'bg-blue-500' : 'bg-green-500'
-              )}>
-                <Clock className="mr-1 h-3 w-3" />
-                {getStatusLabel(selectedCase.status)}
-                {selectedCase.dueIn && ` (${selectedCase.dueIn})`}
               </Badge>
             </div>
           </div>
@@ -877,18 +893,34 @@ export function OutcomeReview() {
                   <div className="space-y-2">
                     {selectedCase.scannedProducts.map((product) => (
                       <div key={product.unitId} className="flex items-center justify-between text-sm bg-primary-foreground/10 rounded p-2">
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            'px-2 py-0.5 rounded text-xs font-bold',
-                            product.productType === 'LTOWB' ? 'bg-red-500 text-white' :
-                            product.productType === 'pRBC' ? 'bg-red-700 text-white' : 'bg-amber-500 text-white'
-                          )}>
-                            {product.productType}
-                          </span>
-                          <span className="font-mono font-medium">{product.unitId}</span>
-                        </div>
-                        <span className="text-xs opacity-60">{product.scannedAt}</span>
-                      </div>
+  <div className="flex items-center gap-2">
+    <span className={cn(
+      'px-2 py-0.5 rounded text-xs font-bold',
+      product.productType === 'LTOWB' ? 'bg-red-500 text-white' :
+      product.productType === 'pRBC' ? 'bg-red-700 text-white' : 'bg-amber-500 text-white'
+    )}>
+      {product.productType}
+    </span>
+    <span className="font-mono font-medium">{product.unitId}</span>
+  </div>
+  <div className="text-xs opacity-80 space-y-0.5">
+    <div className="flex items-center gap-2">
+      <span className="opacity-60">Scanned:</span> {product.scannedAt.split(' ')[1]}
+    </div>
+    {product.startTime && (
+      <div className="flex items-center gap-2">
+        <span className="opacity-60">Start:</span> 
+        <span className="text-green-300 font-medium">{product.startTime}</span>
+        {product.stopTime && (
+          <>
+            <span className="opacity-60">Stop:</span> 
+            <span className="text-amber-300 font-medium">{product.stopTime}</span>
+          </>
+        )}
+      </div>
+    )}
+  </div>
+  </div>
                     ))}
                   </div>
                 ) : (
@@ -1043,10 +1075,55 @@ export function OutcomeReview() {
         </CardContent>
       </Card>
 
+      {/* Transfusion Reaction */}
+      <Card className={cn(selectedCase.transfusionReaction?.reported && "border-amber-500/50 bg-amber-50/30")}>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              Transfusion Reaction
+              {selectedCase.transfusionReaction?.reported && (
+                <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-100">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Reported
+                </Badge>
+              )}
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {selectedCase.transfusionReaction?.reported ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Reaction Type</Label>
+                  <p className="font-medium">{selectedCase.transfusionReaction.type}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Severity</Label>
+                  <Badge variant={selectedCase.transfusionReaction.severity === 'Severe' ? 'destructive' : selectedCase.transfusionReaction.severity === 'Moderate' ? 'default' : 'secondary'}>
+                    {selectedCase.transfusionReaction.severity}
+                  </Badge>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground pt-2 border-t">
+                This case will be flagged in cohort reports and can be filtered for QI review.
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">No transfusion reaction reported</p>
+              <Button variant="outline" size="sm" className="text-xs">
+                Report Reaction
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Hospital Interventions */}
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold">Hospital Interventions</CardTitle>
+      <CardHeader className="pb-4">
+      <CardTitle className="text-base font-semibold">Hospital Interventions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
