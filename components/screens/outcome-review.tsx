@@ -618,14 +618,66 @@ export function OutcomeReview() {
   const abnormalCount = labs.filter((l) => { const s = getStatus(l); return s === 'low' || s === 'high' }).length
   const unreviewedCount = ehrUnreviewed.length
 
+  // Overview stats for this hospital
+  const hospitalStats = {
+    totalCases: CASE_QUEUE.length,
+    pendingReviews: CASE_QUEUE.filter(c => c.status !== 'complete').length,
+    overdueCount: CASE_QUEUE.filter(c => c.status === 'overdue').length,
+    dueTodayCount: CASE_QUEUE.filter(c => c.status === 'due-today').length,
+    completedThisMonth: CASE_QUEUE.filter(c => c.status === 'complete').length,
+    survivalRate: 75, // Mock percentage
+    avgTimeToReview: '18h', // Mock
+  }
+
   return (
-    <div className="flex gap-6">
-      {/* Case List Sidebar */}
-      <div className="w-80 shrink-0">
-        <div className="sticky top-4 space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1">
-            Pending Reviews ({CASE_QUEUE.filter(c => c.status !== 'complete').length})
-          </h2>
+    <div className="space-y-6">
+      {/* Overview Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <Card className="col-span-1">
+          <CardContent className="pt-4 pb-3">
+            <div className="text-2xl font-bold">{hospitalStats.pendingReviews}</div>
+            <div className="text-xs text-muted-foreground">Pending Reviews</div>
+          </CardContent>
+        </Card>
+        <Card className={cn("col-span-1", hospitalStats.overdueCount > 0 && "border-destructive/50 bg-destructive/5")}>
+          <CardContent className="pt-4 pb-3">
+            <div className={cn("text-2xl font-bold", hospitalStats.overdueCount > 0 && "text-destructive")}>{hospitalStats.overdueCount}</div>
+            <div className="text-xs text-muted-foreground">Overdue</div>
+          </CardContent>
+        </Card>
+        <Card className={cn("col-span-1", hospitalStats.dueTodayCount > 0 && "border-amber-500/50 bg-amber-50")}>
+          <CardContent className="pt-4 pb-3">
+            <div className={cn("text-2xl font-bold", hospitalStats.dueTodayCount > 0 && "text-amber-600")}>{hospitalStats.dueTodayCount}</div>
+            <div className="text-xs text-muted-foreground">Due Today</div>
+          </CardContent>
+        </Card>
+        <Card className="col-span-1">
+          <CardContent className="pt-4 pb-3">
+            <div className="text-2xl font-bold text-green-600">{hospitalStats.completedThisMonth}</div>
+            <div className="text-xs text-muted-foreground">Completed (Apr)</div>
+          </CardContent>
+        </Card>
+        <Card className="col-span-1">
+          <CardContent className="pt-4 pb-3">
+            <div className="text-2xl font-bold">{hospitalStats.survivalRate}%</div>
+            <div className="text-xs text-muted-foreground">Survival Rate</div>
+          </CardContent>
+        </Card>
+        <Card className="col-span-1">
+          <CardContent className="pt-4 pb-3">
+            <div className="text-2xl font-bold">{hospitalStats.avgTimeToReview}</div>
+            <div className="text-xs text-muted-foreground">Avg Review Time</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex gap-6">
+        {/* Case List Sidebar */}
+        <div className="w-80 shrink-0">
+          <div className="sticky top-4 space-y-3">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1">
+              Pending Reviews ({hospitalStats.pendingReviews})
+            </h2>
           <div className="space-y-2">
             {CASE_QUEUE.filter(c => c.status !== 'complete').map((caseItem) => (
               <button
@@ -1139,6 +1191,7 @@ export function OutcomeReview() {
       </div>
 
       </div>{/* End main content */}
+      </div>{/* End flex row */}
     </div>
   )
 }
