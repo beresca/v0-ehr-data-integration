@@ -18,7 +18,40 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react'
+
+const NOTIFICATIONS = [
+  {
+    id: 1,
+    icon: AlertTriangle,
+    iconColor: 'text-amber-500',
+    title: 'Outcome review overdue',
+    body: 'P-2026-0892 — hospital outcome not yet documented. Case is 3 days old.',
+    time: '2h ago',
+    unread: true,
+  },
+  {
+    id: 2,
+    icon: CheckCircle2,
+    iconColor: 'text-green-500',
+    title: 'EHR data pulled successfully',
+    body: 'Admission labs for P-2026-0845 synced from Tampa General Hospital.',
+    time: '4h ago',
+    unread: true,
+  },
+  {
+    id: 3,
+    icon: Clock,
+    iconColor: 'text-blue-500',
+    title: 'New case assigned for review',
+    body: 'P-2026-0801 — Hillsborough County FR. Awaiting PI review sign-off.',
+    time: 'Yesterday',
+    unread: true,
+  },
+]
 
 const navItems = [
   { href: '/', label: 'Field Documentation', icon: FileText },
@@ -30,6 +63,9 @@ const navItems = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState(NOTIFICATIONS)
+  const unreadCount = notifications.filter(n => n.unread).length
 
   return (
     <div className="flex h-screen bg-background">
@@ -120,12 +156,67 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {navItems.find((item) => item.href === pathname)?.label || 'BloodTrack'}
           </h1>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <Badge className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-accent p-0 text-[10px] text-accent-foreground">
-                3
-              </Badge>
-            </Button>
+  <div className="relative">
+    <Button
+      variant="ghost"
+      size="icon"
+      className="relative"
+      onClick={() => setNotifOpen(prev => !prev)}
+    >
+      <Bell className="h-5 w-5 text-muted-foreground" />
+      {unreadCount > 0 && (
+        <Badge className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-accent p-0 text-[10px] text-accent-foreground">
+          {unreadCount}
+        </Badge>
+      )}
+    </Button>
+
+    {notifOpen && (
+      <>
+        {/* backdrop */}
+        <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+        {/* dropdown */}
+        <div className="absolute right-0 top-10 z-50 w-80 rounded-lg border bg-background shadow-xl">
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <span className="text-sm font-semibold">Notifications</span>
+            {unreadCount > 0 && (
+              <button
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setNotifications(prev => prev.map(n => ({ ...n, unread: false })))}
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+          <div className="divide-y">
+            {notifications.map((n) => {
+              const Icon = n.icon
+              return (
+                <div
+                  key={n.id}
+                  className={cn(
+                    'flex gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors',
+                    n.unread && 'bg-blue-50/50'
+                  )}
+                  onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, unread: false } : x))}
+                >
+                  <Icon className={cn('h-4 w-4 mt-0.5 shrink-0', n.iconColor)} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={cn('text-sm', n.unread ? 'font-semibold' : 'font-medium')}>{n.title}</p>
+                      {n.unread && <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{n.body}</p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-1">{n.time}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </>
+    )}
+  </div>
             <Link href="/settings">
               <Button variant="ghost" size="icon">
                 <Settings className="h-5 w-5 text-muted-foreground" />
