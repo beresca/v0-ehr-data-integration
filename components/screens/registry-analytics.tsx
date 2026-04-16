@@ -193,7 +193,7 @@ export function RegistryAnalytics() {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold">Registry Analytics</h1>
+            <h1 className="text-2xl font-bold">Program Analytics</h1>
             <Badge variant="outline" className="flex items-center gap-1 text-xs">
               <ShieldCheck className="h-3 w-3 text-green-600" />
               De-identified
