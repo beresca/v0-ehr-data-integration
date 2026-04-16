@@ -32,7 +32,6 @@ import {
   YAxis,
   CartesianGrid,
   ReferenceLine,
-  ResponsiveContainer,
 } from 'recharts'
 import {
   Download,
@@ -45,6 +44,8 @@ import {
   Users,
   Thermometer,
   AlertTriangle,
+  Ambulance,
+  Hospital,
 } from 'lucide-react'
 
 // ─── Aggregate / de-identified mock data — Registry Analytics ─────────────────
@@ -159,6 +160,83 @@ const shockConfig = {
   count: { label: 'Cases', color: '#F59E0B' },
 } satisfies ChartConfig
 
+// ─── Trends: Prehospital vs ED-only cohort data ────────────────────────────────
+
+// Shock index trajectory — field SI → ED arrival SI → 6h SI → 24h SI
+// Cohort A: prehospital transfusion (n=612)  Cohort B: ED-only transfusion (n=672)
+const SI_TRAJECTORY = [
+  { timepoint: 'Field',      phTransfusion: 1.62, edOnly: 1.58 },
+  { timepoint: 'ED Arrival', phTransfusion: 1.21, edOnly: 1.54 },
+  { timepoint: '6 hr',       phTransfusion: 0.94, edOnly: 1.18 },
+  { timepoint: '24 hr',      phTransfusion: 0.82, edOnly: 0.97 },
+]
+
+// Survival by cohort and indication
+const SURVIVAL_COHORT_COMPARISON = [
+  { indication: 'Trauma - MVC',        ph: 84.2, ed: 74.1 },
+  { indication: 'Trauma - Penetrating', ph: 78.6, ed: 67.3 },
+  { indication: 'Trauma - Other',       ph: 88.4, ed: 79.2 },
+  { indication: 'GI Hemorrhage',        ph: 89.1, ed: 86.4 },
+  { indication: 'Obstetric',            ph: 96.2, ed: 92.8 },
+]
+
+// ISS distribution by cohort
+const ISS_BY_COHORT = [
+  { range: '1–8',   ph: 14.2, ed: 18.6 },
+  { range: '9–15',  ph: 22.4, ed: 26.1 },
+  { range: '16–24', ph: 31.8, ed: 28.4 },
+  { range: '25–40', ph: 24.6, ed: 20.8 },
+  { range: '>40',   ph: 7.0,  ed: 6.1  },
+]
+
+// Time metrics by cohort
+const TIME_METRICS = [
+  { metric: 'Scene to first unit', ph: 8.4,  ed: null },
+  { metric: 'Scene to ED',         ph: 22.1, ed: 24.8 },
+  { metric: 'ED arrival to first unit', ph: null, ed: 18.6 },
+  { metric: 'Time to hemorrhage control', ph: 41.2, ed: 58.7 },
+  { metric: '28-day LOS (days)',   ph: 9.8,  ed: 12.4 },
+]
+
+// Monthly shock index trend (rolling median) — both cohorts over time
+const SI_MONTHLY_TREND = [
+  { month: 'Jan 25', ph: 1.68, ed: 1.61 },
+  { month: 'Mar 25', ph: 1.64, ed: 1.60 },
+  { month: 'May 25', ph: 1.61, ed: 1.58 },
+  { month: 'Jul 25', ph: 1.57, ed: 1.57 },
+  { month: 'Sep 25', ph: 1.55, ed: 1.56 },
+  { month: 'Nov 25', ph: 1.52, ed: 1.55 },
+  { month: 'Jan 26', ph: 1.49, ed: 1.54 },
+  { month: 'Mar 26', ph: 1.47, ed: 1.53 },
+]
+
+// Units given in field vs ED for prehospital cohort
+const PH_UNIT_SPLIT = [
+  { phase: 'Field only',     value: 38.4, color: '#1B2B4B' },
+  { phase: 'Field + ED',     value: 51.2, color: '#DC2626' },
+  { phase: 'ED continuation',value: 10.4, color: '#B91C1C' },
+]
+
+const siTrajectoryConfig = {
+  phTransfusion: { label: 'Prehospital transfusion', color: '#DC2626' },
+  edOnly:        { label: 'ED-only transfusion',      color: '#1B2B4B' },
+} satisfies ChartConfig
+
+const survivalCohortConfig = {
+  ph: { label: 'Prehospital transfusion', color: '#DC2626' },
+  ed: { label: 'ED-only transfusion',     color: '#1B2B4B' },
+} satisfies ChartConfig
+
+const issConfig = {
+  ph: { label: 'Prehospital', color: '#DC2626' },
+  ed: { label: 'ED-only',     color: '#1B2B4B' },
+} satisfies ChartConfig
+
+const siMonthlyConfig = {
+  ph: { label: 'Prehospital transfusion', color: '#DC2626' },
+  ed: { label: 'ED-only transfusion',     color: '#1B2B4B' },
+} satisfies ChartConfig
+
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 function StatCard({ stat }: { stat: typeof SUMMARY_STATS[0] }) {
@@ -185,6 +263,7 @@ function StatCard({ stat }: { stat: typeof SUMMARY_STATS[0] }) {
 export function RegistryAnalytics() {
   const [dateRange, setDateRange] = useState('all')
   const [region, setRegion] = useState('all')
+  const [activeTab, setActiveTab] = useState<'overview' | 'trends'>('overview')
 
   return (
     <div className="space-y-6">
@@ -209,7 +288,28 @@ export function RegistryAnalytics() {
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Tab switcher */}
+      <div className="flex gap-1 rounded-lg border bg-card p-1 w-fit">
+        {([
+          { key: 'overview', label: 'Overview' },
+          { key: 'trends',   label: 'Cohort Trends' },
+        ] as const).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              'rounded-md px-4 py-1.5 text-sm font-medium transition-colors',
+              activeTab === tab.key
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filters — shared across both tabs */}
       <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
         <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
         <Select value={dateRange} onValueChange={setDateRange}>
@@ -260,6 +360,8 @@ export function RegistryAnalytics() {
           </SelectContent>
         </Select>
       </div>
+
+      {activeTab === 'overview' && <>
 
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -496,6 +598,230 @@ export function RegistryAnalytics() {
           </CardContent>
         </Card>
       </div>
+
+      </> /* end overview */}
+
+      {activeTab === 'trends' && <>
+
+      {/* Cohort legend */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center gap-3 rounded-lg border-l-4 border-[#DC2626] bg-card px-4 py-3">
+          <Ambulance className="h-5 w-5 text-[#DC2626] shrink-0" />
+          <div>
+            <p className="text-sm font-semibold">Prehospital transfusion cohort</p>
+            <p className="text-xs text-muted-foreground">n=612 &nbsp;|&nbsp; Blood initiated in field before ED arrival</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-lg border-l-4 border-[#1B2B4B] bg-card px-4 py-3">
+          <Hospital className="h-5 w-5 text-[#1B2B4B] shrink-0" />
+          <div>
+            <p className="text-sm font-semibold">ED-only transfusion cohort</p>
+            <p className="text-xs text-muted-foreground">n=672 &nbsp;|&nbsp; Transported without field transfusion, received blood in ED</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Shock Index Trajectory */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Shock index trajectory — prehospital vs ED-only transfusion</CardTitle>
+          <CardDescription>
+            Median shock index at each timepoint. Prehospital transfusion cohort shows steeper early SI reduction.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={siTrajectoryConfig} className="h-[280px] w-full">
+            <LineChart data={SI_TRAJECTORY} margin={{ top: 8, right: 24, bottom: 8, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="timepoint" tick={{ fontSize: 12 }} />
+              <YAxis domain={[0.6, 1.8]} tick={{ fontSize: 11 }} tickFormatter={(v) => v.toFixed(2)} label={{ value: 'Shock Index', angle: -90, position: 'insideLeft', offset: 10, fontSize: 11 }} />
+              <ChartTooltip
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null
+                  return (
+                    <div className="rounded-lg border bg-background p-2.5 text-sm shadow">
+                      <p className="font-semibold mb-1">{label}</p>
+                      {payload.map((p) => (
+                        <div key={p.dataKey} className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                          <span className="text-muted-foreground">{p.name}:</span>
+                          <span className="font-medium">{Number(p.value).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                }}
+              />
+              <ReferenceLine y={1.4} stroke="#F59E0B" strokeDasharray="4 4" label={{ value: 'SI 1.4 threshold', position: 'right', fontSize: 10, fill: '#D97706' }} />
+              <ReferenceLine y={1.0} stroke="#22C55E" strokeDasharray="4 4" label={{ value: 'SI 1.0', position: 'right', fontSize: 10, fill: '#16A34A' }} />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Line type="monotone" dataKey="phTransfusion" stroke="#DC2626" strokeWidth={2.5} dot={{ r: 4, fill: '#DC2626' }} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="edOnly" stroke="#1B2B4B" strokeWidth={2.5} dot={{ r: 4, fill: '#1B2B4B' }} activeDot={{ r: 6 }} strokeDasharray="6 3" />
+            </LineChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
+      {/* Row: Survival comparison + ISS distribution */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Survival rate by indication — cohort comparison</CardTitle>
+            <CardDescription>ED arrival survival; adjusted for indication mix</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={survivalCohortConfig} className="h-[280px] w-full">
+              <BarChart data={SURVIVAL_COHORT_COMPARISON} layout="vertical" barSize={12} barGap={3}>
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                <XAxis type="number" domain={[55, 100]} tick={{ fontSize: 11 }} unit="%" />
+                <YAxis dataKey="indication" type="category" width={152} tick={{ fontSize: 10 }} />
+                <ChartTooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null
+                    const d = payload[0].payload
+                    return (
+                      <div className="rounded-lg border bg-background p-2.5 text-sm shadow">
+                        <p className="font-semibold mb-1">{d.indication}</p>
+                        <div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-[#DC2626]" /><span className="text-muted-foreground">Prehospital:</span><span className="font-medium">{d.ph}%</span></div>
+                        <div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-[#1B2B4B]" /><span className="text-muted-foreground">ED-only:</span><span className="font-medium">{d.ed}%</span></div>
+                      </div>
+                    )
+                  }}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="ph" fill="#DC2626" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="ed" fill="#1B2B4B" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">ISS distribution by cohort</CardTitle>
+            <CardDescription>Injury severity score — % of patients in each range</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={issConfig} className="h-[280px] w-full">
+              <BarChart data={ISS_BY_COHORT} barSize={18} barGap={4}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="range" tick={{ fontSize: 12 }} label={{ value: 'ISS Range', position: 'insideBottom', offset: -2, fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} unit="%" />
+                <ChartTooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null
+                    const d = payload[0].payload
+                    return (
+                      <div className="rounded-lg border bg-background p-2.5 text-sm shadow">
+                        <p className="font-semibold mb-1">ISS {d.range}</p>
+                        <div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-[#DC2626]" /><span className="text-muted-foreground">Prehospital:</span><span className="font-medium">{d.ph}%</span></div>
+                        <div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-[#1B2B4B]" /><span className="text-muted-foreground">ED-only:</span><span className="font-medium">{d.ed}%</span></div>
+                      </div>
+                    )
+                  }}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="ph" fill="#DC2626" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="ed" fill="#1B2B4B" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row: Monthly SI trend + Time metrics table */}
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Field shock index at time of transfusion — rolling monthly median</CardTitle>
+            <CardDescription>Is the program reaching higher-acuity patients over time?</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={siMonthlyConfig} className="h-[240px] w-full">
+              <LineChart data={SI_MONTHLY_TREND} margin={{ top: 8, right: 24, bottom: 8, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} interval={1} />
+                <YAxis domain={[1.3, 1.8]} tick={{ fontSize: 11 }} tickFormatter={(v) => v.toFixed(2)} label={{ value: 'Median SI', angle: -90, position: 'insideLeft', offset: 10, fontSize: 11 }} />
+                <ChartTooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null
+                    return (
+                      <div className="rounded-lg border bg-background p-2.5 text-sm shadow">
+                        <p className="font-semibold mb-1">{label}</p>
+                        {payload.map((p) => (
+                          <div key={p.dataKey} className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                            <span className="text-muted-foreground">{p.name}:</span>
+                            <span className="font-medium">{Number(p.value).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }}
+                />
+                <ReferenceLine y={1.4} stroke="#F59E0B" strokeDasharray="4 4" />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Line type="monotone" dataKey="ph" stroke="#DC2626" strokeWidth={2} dot={{ r: 3, fill: '#DC2626' }} />
+                <Line type="monotone" dataKey="ed" stroke="#1B2B4B" strokeWidth={2} dot={{ r: 3, fill: '#1B2B4B' }} strokeDasharray="5 3" />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Key time metrics</CardTitle>
+            <CardDescription>Median minutes — both cohorts</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-1">
+            <div className="space-y-3">
+              {TIME_METRICS.map((m) => (
+                <div key={m.metric} className="space-y-1">
+                  <p className="text-xs text-muted-foreground leading-tight">{m.metric}</p>
+                  <div className="flex items-center gap-3">
+                    {m.ph !== null ? (
+                      <div className="flex items-center gap-1.5 flex-1">
+                        <div className="h-2 w-2 rounded-full bg-[#DC2626] shrink-0" />
+                        <div className="flex-1 rounded-full bg-muted h-2 overflow-hidden">
+                          <div className="h-full rounded-full bg-[#DC2626]" style={{ width: `${Math.min((m.ph / 65) * 100, 100)}%` }} />
+                        </div>
+                        <span className="text-xs font-semibold tabular-nums w-10 text-right">{m.ph} min</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 flex-1">
+                        <div className="h-2 w-2 rounded-full bg-[#DC2626]/20 shrink-0" />
+                        <span className="text-xs text-muted-foreground italic">N/A</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {m.ed !== null ? (
+                      <div className="flex items-center gap-1.5 flex-1">
+                        <div className="h-2 w-2 rounded-full bg-[#1B2B4B] shrink-0" />
+                        <div className="flex-1 rounded-full bg-muted h-2 overflow-hidden">
+                          <div className="h-full rounded-full bg-[#1B2B4B]" style={{ width: `${Math.min((m.ed / 65) * 100, 100)}%` }} />
+                        </div>
+                        <span className="text-xs font-semibold tabular-nums w-10 text-right">{m.ed} min</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 flex-1">
+                        <div className="h-2 w-2 rounded-full bg-[#1B2B4B]/20 shrink-0" />
+                        <span className="text-xs text-muted-foreground italic">N/A</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground border-t pt-3">
+              <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-[#DC2626]" />Prehospital</div>
+              <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-[#1B2B4B]" />ED-only</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      </> /* end trends */}
 
       {/* De-identification notice */}
       <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
