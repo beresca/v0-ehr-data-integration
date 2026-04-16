@@ -161,13 +161,36 @@ const meetingNotes = [
   },
 ]
 
-// Cohort patients (for selected cohort view)
-const cohortPatients = [
+// Cohort patients keyed by cohort ID
+const cohortPatientsMap: Record<string, typeof cohortPatientsBase> = {
+  c1: [ // Trauma SI > 1.0
+    { id: 'PT-2026-0142', age: 34, sex: 'M', indication: 'Trauma - MVC', agency: 'Miami-Dade FR', date: 'Mar 12', product: 'LTOWB x2', outcome: 'Survived', si: 1.4 },
+    { id: 'PT-2026-0156', age: 28, sex: 'M', indication: 'Trauma - GSW', agency: 'Miami-Dade FR', date: 'Mar 14', product: 'LTOWB x1', outcome: 'Survived', si: 1.2 },
+    { id: 'PT-2026-0178', age: 45, sex: 'F', indication: 'Trauma - Fall', agency: 'Broward Sheriff FR', date: 'Mar 18', product: 'pRBC x2', outcome: 'Survived', si: 1.1 },
+    { id: 'PT-2026-0201', age: 52, sex: 'M', indication: 'Trauma - MVC', agency: 'Hillsborough FR', date: 'Mar 22', product: 'LTOWB x1', outcome: 'Deceased', si: 1.8 },
+    { id: 'PT-2026-0234', age: 19, sex: 'M', indication: 'Trauma - Stab', agency: 'Orange County FR', date: 'Mar 28', product: 'LTOWB x2', outcome: 'Survived', si: 1.3 },
+  ],
+  c2: [ // GI Bleed - LTOWB
+    { id: 'PT-2026-0089', age: 68, sex: 'M', indication: 'GI Bleed - Upper', agency: 'Hillsborough FR', date: 'Mar 5', product: 'LTOWB x1', outcome: 'Survived', si: 1.1 },
+    { id: 'PT-2026-0112', age: 72, sex: 'F', indication: 'GI Bleed - Variceal', agency: 'Palm Beach FR', date: 'Mar 9', product: 'LTOWB x2', outcome: 'Survived', si: 1.3 },
+    { id: 'PT-2026-0134', age: 55, sex: 'M', indication: 'GI Bleed - Upper', agency: 'Broward Sheriff FR', date: 'Mar 11', product: 'LTOWB x1', outcome: 'Survived', si: 0.9 },
+  ],
+  c3: [ // OB Hemorrhage Q1
+    { id: 'PT-2026-0067', age: 32, sex: 'F', indication: 'OB - Postpartum', agency: 'Miami-Dade FR', date: 'Jan 18', product: 'LTOWB x2', outcome: 'Survived', si: 1.5 },
+    { id: 'PT-2026-0098', age: 28, sex: 'F', indication: 'OB - Placenta Previa', agency: 'Orange County FR', date: 'Feb 4', product: 'pRBC x2, Plasma x1', outcome: 'Survived', si: 1.2 },
+    { id: 'PT-2026-0145', age: 35, sex: 'F', indication: 'OB - Postpartum', agency: 'Hillsborough FR', date: 'Mar 12', product: 'LTOWB x1', outcome: 'Survived', si: 1.0 },
+  ],
+  c4: [ // Non-survivors Review — ALL deceased
+    { id: 'PT-2026-0023', age: 78, sex: 'M', indication: 'Trauma - Fall', agency: 'Pinellas EMS', date: 'Jan 8', product: 'LTOWB x2', outcome: 'Deceased', si: 1.9 },
+    { id: 'PT-2026-0056', age: 42, sex: 'M', indication: 'Trauma - MVC', agency: 'Duval County FR', date: 'Jan 22', product: 'LTOWB x3', outcome: 'Deceased', si: 2.1 },
+    { id: 'PT-2026-0087', age: 65, sex: 'F', indication: 'GI Bleed - Variceal', agency: 'Miami-Dade FR', date: 'Feb 3', product: 'pRBC x2, Plasma x2', outcome: 'Deceased', si: 1.6 },
+    { id: 'PT-2026-0124', age: 58, sex: 'M', indication: 'Trauma - GSW', agency: 'Broward Sheriff FR', date: 'Feb 19', product: 'LTOWB x4', outcome: 'Deceased', si: 2.4 },
+    { id: 'PT-2026-0201', age: 52, sex: 'M', indication: 'Trauma - MVC', agency: 'Hillsborough FR', date: 'Mar 22', product: 'LTOWB x1', outcome: 'Deceased', si: 1.8 },
+  ],
+}
+
+const cohortPatientsBase = [
   { id: 'PT-2026-0142', age: 34, sex: 'M', indication: 'Trauma - MVC', agency: 'Miami-Dade FR', date: 'Mar 12', product: 'LTOWB x2', outcome: 'Survived', si: 1.4 },
-  { id: 'PT-2026-0156', age: 28, sex: 'M', indication: 'Trauma - GSW', agency: 'Miami-Dade FR', date: 'Mar 14', product: 'LTOWB x1', outcome: 'Survived', si: 1.2 },
-  { id: 'PT-2026-0178', age: 45, sex: 'F', indication: 'Trauma - Fall', agency: 'Broward Sheriff FR', date: 'Mar 18', product: 'pRBC x2', outcome: 'Survived', si: 1.1 },
-  { id: 'PT-2026-0201', age: 52, sex: 'M', indication: 'Trauma - MVC', agency: 'Hillsborough FR', date: 'Mar 22', product: 'LTOWB x1', outcome: 'Deceased', si: 1.8 },
-  { id: 'PT-2026-0234', age: 19, sex: 'M', indication: 'Trauma - Stab', agency: 'Orange County FR', date: 'Mar 28', product: 'LTOWB x2', outcome: 'Survived', si: 1.3 },
 ]
 
 const barChartConfig = {
@@ -428,7 +451,7 @@ export function CohortReview() {
               Back
             </Button>
             <h2 className="text-lg font-semibold">{savedCohorts.find(c => c.id === selectedCohort)?.name}</h2>
-            <Badge variant="secondary">{cohortPatients.length} patients</Badge>
+            <Badge variant="secondary">{(cohortPatientsMap[selectedCohort] || []).length} patients</Badge>
           </div>
 
           <Card>
@@ -447,7 +470,7 @@ export function CohortReview() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {cohortPatients.map(p => (
+                  {(cohortPatientsMap[selectedCohort] || []).map(p => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium text-primary">{p.id}</TableCell>
                       <TableCell>{p.age}{p.sex}</TableCell>
