@@ -142,7 +142,158 @@ const agencyPatientsMap: Record<string, Array<{ id: string; age: number; sex: st
   ],
 }
 
-// Saved cohorts
+// ─── Provider / LMS / License data ───────────────────────────────────────────
+
+type LMSCourse = { id: string; title: string; required: boolean; dueEvery: number } // dueEvery = months
+
+const LMS_COURSES: LMSCourse[] = [
+  { id: 'c-wb01',  title: 'Whole Blood Administration',          required: true,  dueEvery: 12 },
+  { id: 'c-sh01',  title: 'Hemorrhagic Shock Recognition',       required: true,  dueEvery: 12 },
+  { id: 'c-cc01',  title: 'Cold Chain Management',               required: true,  dueEvery: 24 },
+  { id: 'c-si01',  title: 'Shock Index Calculation & Use',       required: true,  dueEvery: 12 },
+  { id: 'c-rx01',  title: 'Transfusion Reaction Recognition',    required: true,  dueEvery: 24 },
+  { id: 'c-ob01',  title: 'OB Hemorrhage — Special Populations', required: false, dueEvery: 24 },
+  { id: 'c-adv01', title: 'Advanced Hemorrhage Control (TCCC)',  required: false, dueEvery: 36 },
+]
+
+type ProviderCourse = { courseId: string; completedDate: string | null; status: 'current' | 'expiring' | 'overdue' | 'not-started' }
+
+type Provider = {
+  id: string
+  name: string
+  cert: 'AEMT' | 'Paramedic' | 'EMT-Basic'
+  licenseExpiry: string
+  licenseStatus: 'active' | 'expiring-soon' | 'expired'
+  lastRun: string
+  runsOnRecord: number
+  courses: ProviderCourse[]
+}
+
+const agencyProvidersMap: Record<string, Provider[]> = {
+  'Hillsborough County Fire Rescue': [
+    {
+      id: 'PR-001', name: 'Marcus T. Rivera', cert: 'Paramedic', licenseExpiry: '2026-07-14', licenseStatus: 'active', lastRun: '04/08/2026', runsOnRecord: 12,
+      courses: [
+        { courseId: 'c-wb01', completedDate: '2025-11-02', status: 'current' },
+        { courseId: 'c-sh01', completedDate: '2025-10-15', status: 'current' },
+        { courseId: 'c-cc01', completedDate: '2024-08-01', status: 'current' },
+        { courseId: 'c-si01', completedDate: '2025-09-20', status: 'current' },
+        { courseId: 'c-rx01', completedDate: '2024-11-30', status: 'current' },
+        { courseId: 'c-ob01', completedDate: null, status: 'not-started' },
+        { courseId: 'c-adv01', completedDate: '2024-01-10', status: 'current' },
+      ],
+    },
+    {
+      id: 'PR-002', name: 'Danielle K. Osei', cert: 'Paramedic', licenseExpiry: '2026-09-30', licenseStatus: 'active', lastRun: '04/02/2026', runsOnRecord: 8,
+      courses: [
+        { courseId: 'c-wb01', completedDate: '2025-03-18', status: 'expiring' },
+        { courseId: 'c-sh01', completedDate: '2025-02-01', status: 'expiring' },
+        { courseId: 'c-cc01', completedDate: '2024-03-05', status: 'current' },
+        { courseId: 'c-si01', completedDate: '2025-03-18', status: 'expiring' },
+        { courseId: 'c-rx01', completedDate: '2023-09-12', status: 'overdue' },
+        { courseId: 'c-ob01', completedDate: '2024-05-22', status: 'current' },
+        { courseId: 'c-adv01', completedDate: null, status: 'not-started' },
+      ],
+    },
+    {
+      id: 'PR-003', name: 'James P. Whitfield', cert: 'AEMT', licenseExpiry: '2026-05-01', licenseStatus: 'expiring-soon', lastRun: '03/28/2026', runsOnRecord: 5,
+      courses: [
+        { courseId: 'c-wb01', completedDate: null, status: 'overdue' },
+        { courseId: 'c-sh01', completedDate: '2024-10-10', status: 'expiring' },
+        { courseId: 'c-cc01', completedDate: '2023-11-15', status: 'overdue' },
+        { courseId: 'c-si01', completedDate: null, status: 'not-started' },
+        { courseId: 'c-rx01', completedDate: null, status: 'not-started' },
+        { courseId: 'c-ob01', completedDate: null, status: 'not-started' },
+        { courseId: 'c-adv01', completedDate: null, status: 'not-started' },
+      ],
+    },
+  ],
+  'Miami-Dade Fire Rescue': [
+    {
+      id: 'PR-010', name: 'Sofia A. Menendez', cert: 'Paramedic', licenseExpiry: '2027-01-20', licenseStatus: 'active', lastRun: '03/25/2026', runsOnRecord: 9,
+      courses: [
+        { courseId: 'c-wb01', completedDate: '2025-12-01', status: 'current' },
+        { courseId: 'c-sh01', completedDate: '2025-11-14', status: 'current' },
+        { courseId: 'c-cc01', completedDate: '2025-01-08', status: 'current' },
+        { courseId: 'c-si01', completedDate: '2025-10-30', status: 'current' },
+        { courseId: 'c-rx01', completedDate: '2025-02-18', status: 'current' },
+        { courseId: 'c-ob01', completedDate: '2025-03-05', status: 'current' },
+        { courseId: 'c-adv01', completedDate: null, status: 'not-started' },
+      ],
+    },
+    {
+      id: 'PR-011', name: 'Devon A. Wallace', cert: 'Paramedic', licenseExpiry: '2026-08-15', licenseStatus: 'active', lastRun: '03/18/2026', runsOnRecord: 6,
+      courses: [
+        { courseId: 'c-wb01', completedDate: '2025-04-22', status: 'expiring' },
+        { courseId: 'c-sh01', completedDate: '2025-05-10', status: 'current' },
+        { courseId: 'c-cc01', completedDate: '2024-06-01', status: 'current' },
+        { courseId: 'c-si01', completedDate: '2025-04-22', status: 'expiring' },
+        { courseId: 'c-rx01', completedDate: '2023-08-19', status: 'overdue' },
+        { courseId: 'c-ob01', completedDate: null, status: 'not-started' },
+        { courseId: 'c-adv01', completedDate: null, status: 'not-started' },
+      ],
+    },
+  ],
+  'Orange County Fire Rescue': [
+    {
+      id: 'PR-020', name: 'Terrence L. Booth', cert: 'Paramedic', licenseExpiry: '2026-11-30', licenseStatus: 'active', lastRun: '03/12/2026', runsOnRecord: 4,
+      courses: [
+        { courseId: 'c-wb01', completedDate: '2025-08-14', status: 'current' },
+        { courseId: 'c-sh01', completedDate: '2025-07-22', status: 'current' },
+        { courseId: 'c-cc01', completedDate: '2024-09-11', status: 'current' },
+        { courseId: 'c-si01', completedDate: '2025-08-14', status: 'current' },
+        { courseId: 'c-rx01', completedDate: '2024-10-05', status: 'current' },
+        { courseId: 'c-ob01', completedDate: null, status: 'not-started' },
+        { courseId: 'c-adv01', completedDate: null, status: 'not-started' },
+      ],
+    },
+  ],
+  'Broward County Fire Rescue': [
+    {
+      id: 'PR-030', name: 'Angela R. Nguyen', cert: 'Paramedic', licenseExpiry: '2026-04-28', licenseStatus: 'expiring-soon', lastRun: '03/05/2026', runsOnRecord: 7,
+      courses: [
+        { courseId: 'c-wb01', completedDate: '2025-06-10', status: 'current' },
+        { courseId: 'c-sh01', completedDate: '2025-05-28', status: 'current' },
+        { courseId: 'c-cc01', completedDate: '2024-07-03', status: 'current' },
+        { courseId: 'c-si01', completedDate: '2025-06-10', status: 'current' },
+        { courseId: 'c-rx01', completedDate: '2023-06-15', status: 'overdue' },
+        { courseId: 'c-ob01', completedDate: '2025-01-20', status: 'current' },
+        { courseId: 'c-adv01', completedDate: '2023-03-01', status: 'expiring' },
+      ],
+    },
+    {
+      id: 'PR-031', name: 'Kevin J. Marshall', cert: 'AEMT', licenseExpiry: '2027-02-10', licenseStatus: 'active', lastRun: '02/28/2026', runsOnRecord: 3,
+      courses: [
+        { courseId: 'c-wb01', completedDate: '2025-09-08', status: 'current' },
+        { courseId: 'c-sh01', completedDate: '2025-08-22', status: 'current' },
+        { courseId: 'c-cc01', completedDate: '2025-10-01', status: 'current' },
+        { courseId: 'c-si01', completedDate: '2025-09-08', status: 'current' },
+        { courseId: 'c-rx01', completedDate: '2025-11-04', status: 'current' },
+        { courseId: 'c-ob01', completedDate: null, status: 'not-started' },
+        { courseId: 'c-adv01', completedDate: null, status: 'not-started' },
+      ],
+    },
+  ],
+}
+
+function courseStatusBadge(status: ProviderCourse['status']) {
+  switch (status) {
+    case 'current':     return <Badge className="bg-green-100 text-green-800 border-green-300 font-normal text-[11px]">Current</Badge>
+    case 'expiring':    return <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-normal text-[11px]">Expiring</Badge>
+    case 'overdue':     return <Badge className="bg-red-100 text-red-800 border-red-300 font-normal text-[11px]">Overdue</Badge>
+    case 'not-started': return <Badge className="bg-muted text-muted-foreground border-border font-normal text-[11px]">Not started</Badge>
+  }
+}
+
+function licenseStatusBadge(status: Provider['licenseStatus']) {
+  switch (status) {
+    case 'active':        return <Badge className="bg-green-100 text-green-800 border-green-300 text-[11px] font-normal">Active</Badge>
+    case 'expiring-soon': return <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[11px] font-normal">Expiring soon</Badge>
+    case 'expired':       return <Badge className="bg-red-100 text-red-800 border-red-300 text-[11px] font-normal">Expired</Badge>
+  }
+}
+
+// ─── Saved cohorts ────────────────────────────────────────────────────────────
 const savedCohorts = [
   { id: 'c1', name: 'Trauma SI > 1.0', patients: 42, created: 'Mar 15, 2026', filters: ['Indication: Trauma', 'Shock Index > 1.0'] },
   { id: 'c2', name: 'GI Bleed - LTOWB', patients: 18, created: 'Mar 8, 2026', filters: ['Indication: GI Bleed', 'Product: LTOWB'] },
@@ -256,6 +407,8 @@ export function CohortReview() {
   const [selectedPatientForEPCR, setSelectedPatientForEPCR] = useState<string | null>(null)
   const [recordTab, setRecordTab] = useState<'ePCR' | 'Outcomes'>('ePCR')
   const [selectedAgency, setSelectedAgency] = useState<string | null>(null)
+  const [agencySubTab, setAgencySubTab] = useState<'patients' | 'providers'>('patients')
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null)
 
   // Cohort builder state
   const [cohortName, setCohortName] = useState('')
@@ -731,11 +884,11 @@ export function CohortReview() {
 
       {/* Agency Performance */}
       <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-0">
+          <div className="flex items-center justify-between pb-4">
             <div className="flex items-center gap-2">
               {selectedAgency && (
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedAgency(null)}>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedAgency(null); setSelectedProvider(null) }}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               )}
@@ -744,12 +897,41 @@ export function CohortReview() {
               </CardTitle>
             </div>
             <Badge variant="outline" className="text-xs">
-              {selectedAgency ? `${agencyPatientsMap[selectedAgency]?.length ?? 0} patients` : `${agencyData.length} agencies`}
+              {selectedAgency
+                ? agencySubTab === 'patients'
+                  ? `${agencyPatientsMap[selectedAgency]?.length ?? 0} patients`
+                  : `${agencyProvidersMap[selectedAgency]?.length ?? 0} providers`
+                : `${agencyData.length} agencies`}
             </Badge>
           </div>
+
+          {/* Sub-tabs when an agency is selected */}
+          {selectedAgency && (
+            <div className="flex border-t -mx-6 px-6">
+              {([
+                { key: 'patients',  label: 'Patient Records' },
+                { key: 'providers', label: 'Provider Roster & Training' },
+              ] as const).map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => { setAgencySubTab(tab.key); setSelectedProvider(null) }}
+                  className={cn(
+                    'py-2.5 px-4 text-sm font-medium transition-colors',
+                    agencySubTab === tab.key
+                      ? 'border-b-2 border-primary text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="pt-4">
           {!selectedAgency ? (
+            /* ── Agency list ── */
             <Table>
               <TableHeader>
                 <TableRow>
@@ -765,7 +947,7 @@ export function CohortReview() {
                   <TableRow
                     key={row.agency}
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => setSelectedAgency(row.agency)}
+                    onClick={() => { setSelectedAgency(row.agency); setAgencySubTab('patients') }}
                   >
                     <TableCell>
                       <span className="font-medium text-blue-600 underline underline-offset-2 decoration-blue-300 hover:text-blue-800 hover:decoration-blue-600 transition-colors flex items-center gap-1.5">
@@ -786,7 +968,9 @@ export function CohortReview() {
                 ))}
               </TableBody>
             </Table>
-          ) : (
+
+          ) : agencySubTab === 'patients' ? (
+            /* ── Patient list ── */
             <Table>
               <TableHeader>
                 <TableRow>
@@ -841,6 +1025,152 @@ export function CohortReview() {
                 ))}
               </TableBody>
             </Table>
+
+          ) : (
+            /* ── Provider roster + training ── */
+            <div className="space-y-4">
+              {!selectedProvider ? (
+                /* Provider list */
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Provider</TableHead>
+                      <TableHead>Certification</TableHead>
+                      <TableHead>License expiry</TableHead>
+                      <TableHead>Runs on record</TableHead>
+                      <TableHead>Required courses</TableHead>
+                      <TableHead>Gaps</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(agencyProvidersMap[selectedAgency] ?? []).map((prov) => {
+                      const required = LMS_COURSES.filter(c => c.required)
+                      const gaps = prov.courses.filter(c => {
+                        const course = LMS_COURSES.find(l => l.id === c.courseId)
+                        return course?.required && (c.status === 'overdue' || c.status === 'not-started')
+                      }).length
+                      const current = prov.courses.filter(c => {
+                        const course = LMS_COURSES.find(l => l.id === c.courseId)
+                        return course?.required && c.status === 'current'
+                      }).length
+                      return (
+                        <TableRow
+                          key={prov.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setSelectedProvider(prov)}
+                        >
+                          <TableCell>
+                            <span className="font-medium text-blue-600 underline underline-offset-2 decoration-blue-300 hover:text-blue-800 transition-colors flex items-center gap-1.5">
+                              {prov.name}
+                              <ChevronRight className="h-3.5 w-3.5 text-blue-400" />
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">{prov.cert}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {licenseStatusBadge(prov.licenseStatus)}
+                              <span className="text-xs text-muted-foreground">{prov.licenseExpiry}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">{prov.runsOnRecord}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden w-20">
+                                <div
+                                  className="h-full rounded-full bg-green-500"
+                                  style={{ width: `${(current / required.length) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground tabular-nums">{current}/{required.length}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {gaps > 0
+                              ? <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">{gaps} gap{gaps > 1 ? 's' : ''}</Badge>
+                              : <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">Compliant</Badge>
+                            }
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                /* Provider detail — LMS course breakdown */
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setSelectedProvider(null)}>
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      Back to roster
+                    </Button>
+                  </div>
+
+                  {/* Provider header */}
+                  <div className="rounded-lg border bg-muted/30 p-4 flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-base">{selectedProvider.name}</p>
+                        <Badge variant="outline" className="text-xs">{selectedProvider.cert}</Badge>
+                        {licenseStatusBadge(selectedProvider.licenseStatus)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">License expiry: {selectedProvider.licenseExpiry} &nbsp;&bull;&nbsp; {selectedProvider.runsOnRecord} transfusion runs on record &nbsp;&bull;&nbsp; Last run: {selectedProvider.lastRun}</p>
+                    </div>
+                  </div>
+
+                  {/* Course table */}
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">LMS Course Status — pulled from Learning Management System</p>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Course</TableHead>
+                          <TableHead>Required</TableHead>
+                          <TableHead>Recertify every</TableHead>
+                          <TableHead>Last completed</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {LMS_COURSES.map((course) => {
+                          const rec = selectedProvider.courses.find(c => c.courseId === course.id)
+                          return (
+                            <TableRow key={course.id} className={cn(rec?.status === 'overdue' && 'bg-red-50/40', rec?.status === 'expiring' && 'bg-amber-50/30')}>
+                              <TableCell className="font-medium text-sm">{course.title}</TableCell>
+                              <TableCell>{course.required ? <Badge className="bg-primary/10 text-primary border-primary/20 text-xs font-normal">Required</Badge> : <span className="text-xs text-muted-foreground">Optional</span>}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{course.dueEvery} mo</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{rec?.completedDate ?? '—'}</TableCell>
+                              <TableCell>{rec ? courseStatusBadge(rec.status) : courseStatusBadge('not-started')}</TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Recommended courses callout */}
+                  {selectedProvider.courses.some(c => c.status === 'overdue' || c.status === 'not-started') && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+                      <p className="font-medium text-amber-800 mb-1">Recommended action</p>
+                      <ul className="space-y-1 text-amber-700 text-xs">
+                        {selectedProvider.courses
+                          .filter(c => c.status === 'overdue' || c.status === 'not-started')
+                          .map(c => {
+                            const course = LMS_COURSES.find(l => l.id === c.courseId)
+                            return (
+                              <li key={c.courseId} className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                                <span>{course?.title} — {c.status === 'overdue' ? 'overdue, re-enroll immediately' : 'not yet completed, assign in LMS'}</span>
+                              </li>
+                            )
+                          })}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>

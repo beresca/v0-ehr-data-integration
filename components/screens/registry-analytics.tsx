@@ -217,6 +217,51 @@ const PH_UNIT_SPLIT = [
   { phase: 'ED continuation',value: 10.4, color: '#B91C1C' },
 ]
 
+// ─── Provider Workforce analytics data ────────────────────────────────────────
+
+const WORKFORCE_AGENCY_COMPLIANCE = [
+  { agency: 'Hillsborough FR', providers: 18, compliant: 14, expiring: 2, overdue: 2,  licenseIssues: 1 },
+  { agency: 'Miami-Dade FR',   providers: 24, compliant: 20, expiring: 3, overdue: 1,  licenseIssues: 0 },
+  { agency: 'Orange County FR',providers: 12, compliant: 11, expiring: 1, overdue: 0,  licenseIssues: 0 },
+  { agency: 'Broward FR',      providers: 16, compliant: 11, expiring: 3, overdue: 2,  licenseIssues: 2 },
+]
+
+const COURSE_COMPLETION_RATES = [
+  { course: 'Whole Blood Admin',         required: true,  rate: 81 },
+  { course: 'Hemorrhagic Shock Recognition', required: true, rate: 88 },
+  { course: 'Cold Chain Management',     required: true,  rate: 93 },
+  { course: 'Shock Index Calc & Use',    required: true,  rate: 79 },
+  { course: 'Transfusion Reaction',      required: true,  rate: 72 },
+  { course: 'OB Hemorrhage',             required: false, rate: 46 },
+  { course: 'Advanced Hemorrhage (TCCC)',required: false, rate: 31 },
+]
+
+const CREDENTIAL_TREND = [
+  { month: 'Oct 25', compliant: 74, expiring: 14, overdue: 12 },
+  { month: 'Nov 25', compliant: 76, expiring: 13, overdue: 11 },
+  { month: 'Dec 25', compliant: 78, expiring: 14, overdue: 8  },
+  { month: 'Jan 26', compliant: 80, expiring: 12, overdue: 8  },
+  { month: 'Feb 26', compliant: 79, expiring: 14, overdue: 7  },
+  { month: 'Mar 26', compliant: 78, expiring: 14, overdue: 8  },
+  { month: 'Apr 26', compliant: 79, expiring: 13, overdue: 8  },
+]
+
+const workforceComplianceConfig = {
+  compliant: { label: 'Compliant',    color: '#22C55E' },
+  expiring:  { label: 'Expiring',     color: '#F59E0B' },
+  overdue:   { label: 'Overdue',      color: '#DC2626' },
+} satisfies ChartConfig
+
+const credentialTrendConfig = {
+  compliant: { label: 'Compliant',    color: '#22C55E' },
+  expiring:  { label: 'Expiring soon',color: '#F59E0B' },
+  overdue:   { label: 'Overdue',      color: '#DC2626' },
+} satisfies ChartConfig
+
+const courseRateConfig = {
+  rate: { label: 'Completion %', color: '#1B2B4B' },
+} satisfies ChartConfig
+
 const siTrajectoryConfig = {
   phTransfusion: { label: 'Prehospital transfusion', color: '#DC2626' },
   edOnly:        { label: 'ED-only transfusion',      color: '#1B2B4B' },
@@ -263,7 +308,7 @@ function StatCard({ stat }: { stat: typeof SUMMARY_STATS[0] }) {
 export function RegistryAnalytics() {
   const [dateRange, setDateRange] = useState('all')
   const [region, setRegion] = useState('all')
-  const [activeTab, setActiveTab] = useState<'overview' | 'trends'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'trends' | 'workforce'>('overview')
 
   return (
     <div className="space-y-6">
@@ -291,8 +336,9 @@ export function RegistryAnalytics() {
       {/* Tab switcher */}
       <div className="flex gap-1 rounded-lg border bg-card p-1 w-fit">
         {([
-          { key: 'overview', label: 'Overview' },
-          { key: 'trends',   label: 'Cohort Trends' },
+          { key: 'overview',   label: 'Overview' },
+          { key: 'trends',     label: 'Cohort Trends' },
+          { key: 'workforce',  label: 'Provider Workforce' },
         ] as const).map(tab => (
           <button
             key={tab.key}
@@ -822,6 +868,151 @@ export function RegistryAnalytics() {
       </div>
 
       </> /* end trends */}
+
+      {activeTab === 'workforce' && <>
+
+      {/* Workforce summary KPIs */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {[
+          { label: 'Total credentialed providers', value: '70',   sub: 'Across 4 agencies',          color: '#1B2B4B' },
+          { label: 'Fully compliant',               value: '79%',  sub: '55 of 70 providers',         color: '#22C55E' },
+          { label: 'License issues',                value: '3',    sub: 'Expiring within 30 days',    color: '#F59E0B' },
+          { label: 'Required course gaps',          value: '13',   sub: 'Providers with 1+ overdue',  color: '#DC2626' },
+        ].map(s => (
+          <Card key={s.label}>
+            <CardContent className="pt-5">
+              <p className="text-sm text-muted-foreground leading-snug">{s.label}</p>
+              <p className="mt-1 text-3xl font-bold tracking-tight">{s.value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{s.sub}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Row: Agency compliance stack + credential trend */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Provider credential status by agency</CardTitle>
+            <CardDescription>Stacked count — compliant, expiring, overdue</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={workforceComplianceConfig} className="h-[260px] w-full">
+              <BarChart data={WORKFORCE_AGENCY_COMPLIANCE} layout="vertical" barSize={14} barGap={2}>
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <YAxis dataKey="agency" type="category" width={120} tick={{ fontSize: 10 }} />
+                <ChartTooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null
+                    const d = payload[0].payload
+                    return (
+                      <div className="rounded-lg border bg-background p-2.5 text-sm shadow">
+                        <p className="font-semibold mb-1">{d.agency}</p>
+                        <div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-[#22C55E]" /><span className="text-muted-foreground">Compliant:</span><span className="font-medium">{d.compliant}</span></div>
+                        <div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-[#F59E0B]" /><span className="text-muted-foreground">Expiring:</span><span className="font-medium">{d.expiring}</span></div>
+                        <div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-[#DC2626]" /><span className="text-muted-foreground">Overdue:</span><span className="font-medium">{d.overdue}</span></div>
+                      </div>
+                    )
+                  }}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="compliant" fill="#22C55E" radius={[0, 0, 0, 0]} stackId="a" />
+                <Bar dataKey="expiring"  fill="#F59E0B" stackId="a" />
+                <Bar dataKey="overdue"   fill="#DC2626" radius={[0, 4, 4, 0]} stackId="a" />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Credential compliance trend</CardTitle>
+            <CardDescription>% of providers by status — rolling monthly</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={credentialTrendConfig} className="h-[260px] w-full">
+              <LineChart data={CREDENTIAL_TREND} margin={{ top: 8, right: 24, bottom: 8, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
+                <ChartTooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null
+                    return (
+                      <div className="rounded-lg border bg-background p-2.5 text-sm shadow">
+                        <p className="font-semibold mb-1">{label}</p>
+                        {payload.map(p => (
+                          <div key={p.dataKey} className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                            <span className="text-muted-foreground">{p.name}:</span>
+                            <span className="font-medium">{p.value}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Line type="monotone" dataKey="compliant" stroke="#22C55E" strokeWidth={2.5} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="expiring"  stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="5 3" />
+                <Line type="monotone" dataKey="overdue"   stroke="#DC2626" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="3 3" />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* LMS course completion rates */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">LMS course completion rates — all agencies</CardTitle>
+          <CardDescription>% of eligible providers who have a current, valid completion. Required courses highlighted.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={courseRateConfig} className="h-[260px] w-full">
+            <BarChart data={COURSE_COMPLETION_RATES} layout="vertical" barSize={18}>
+              <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
+              <YAxis dataKey="course" type="category" width={188} tick={{ fontSize: 10 }} />
+              <ReferenceLine x={80} stroke="#F59E0B" strokeDasharray="4 4" label={{ value: '80% target', position: 'top', fontSize: 10, fill: '#D97706' }} />
+              <ChartTooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null
+                  const d = payload[0].payload
+                  return (
+                    <div className="rounded-lg border bg-background p-2.5 text-sm shadow">
+                      <p className="font-semibold mb-1">{d.course}</p>
+                      <p className="text-muted-foreground text-xs">{d.required ? 'Required' : 'Optional'}</p>
+                      <p className="font-medium">{d.rate}% complete</p>
+                      {d.rate < 80 && d.required && <p className="text-red-600 text-xs mt-1">Below 80% target</p>}
+                    </div>
+                  )
+                }}
+              />
+              <Bar
+                dataKey="rate"
+                radius={[0, 4, 4, 0]}
+                label={{ position: 'right', fontSize: 10, formatter: (v: number) => `${v}%` }}
+              >
+                {COURSE_COMPLETION_RATES.map((entry, i) => (
+                  <Cell
+                    key={i}
+                    fill={entry.required && entry.rate < 80 ? '#DC2626' : entry.required ? '#1B2B4B' : '#6B7280'}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ChartContainer>
+          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground border-t pt-3">
+            <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-sm bg-[#1B2B4B]" /><span>Required — above target</span></div>
+            <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-sm bg-[#DC2626]" /><span>Required — below 80% target</span></div>
+            <div className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-sm bg-[#6B7280]" /><span>Optional</span></div>
+          </div>
+        </CardContent>
+      </Card>
+
+      </> /* end workforce */}
 
       {/* De-identification notice */}
       <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
