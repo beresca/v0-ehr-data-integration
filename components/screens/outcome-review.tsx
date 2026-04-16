@@ -650,7 +650,7 @@ export function OutcomeReview() {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <Card 
           className={cn("col-span-1 cursor-pointer transition-all hover:border-primary/50", statusFilter === 'pending' && "ring-2 ring-primary border-primary")}
-          onClick={() => setStatusFilter('pending')}
+          onClick={() => setStatusFilter(s => s === 'pending' ? 'all' : 'pending')}
         >
           <CardContent className="pt-4 pb-3">
             <div className="text-2xl font-bold">{hospitalStats.pendingReviews}</div>
@@ -659,7 +659,7 @@ export function OutcomeReview() {
         </Card>
         <Card 
           className={cn("col-span-1 cursor-pointer transition-all hover:border-primary/50", hospitalStats.overdueCount > 0 && "border-destructive/50 bg-destructive/5", statusFilter === 'overdue' && "ring-2 ring-destructive")}
-          onClick={() => setStatusFilter('overdue')}
+          onClick={() => setStatusFilter(s => s === 'overdue' ? 'all' : 'overdue')}
         >
           <CardContent className="pt-4 pb-3">
             <div className={cn("text-2xl font-bold", hospitalStats.overdueCount > 0 && "text-destructive")}>{hospitalStats.overdueCount}</div>
@@ -668,7 +668,7 @@ export function OutcomeReview() {
         </Card>
         <Card 
           className={cn("col-span-1 cursor-pointer transition-all hover:border-primary/50", hospitalStats.dueTodayCount > 0 && "border-amber-500/50 bg-amber-50", statusFilter === 'due-today' && "ring-2 ring-amber-500")}
-          onClick={() => setStatusFilter('due-today')}
+          onClick={() => setStatusFilter(s => s === 'due-today' ? 'all' : 'due-today')}
         >
           <CardContent className="pt-4 pb-3">
             <div className={cn("text-2xl font-bold", hospitalStats.dueTodayCount > 0 && "text-amber-600")}>{hospitalStats.dueTodayCount}</div>
@@ -677,7 +677,7 @@ export function OutcomeReview() {
         </Card>
         <Card 
           className={cn("col-span-1 cursor-pointer transition-all hover:border-primary/50", statusFilter === 'complete' && "ring-2 ring-green-500")}
-          onClick={() => setStatusFilter('complete')}
+          onClick={() => setStatusFilter(s => s === 'complete' ? 'all' : 'complete')}
         >
           <CardContent className="pt-4 pb-3">
             <div className="text-2xl font-bold text-green-600">{hospitalStats.completedThisMonth}</div>
@@ -698,17 +698,17 @@ export function OutcomeReview() {
         </Card>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6 min-w-0">
         {/* Case List Sidebar */}
-        <div className="w-80 shrink-0">
-          <div className="sticky top-4 space-y-3">
+        <div className="w-full lg:w-72 lg:shrink-0">
+          <div className="lg:sticky lg:top-4 space-y-3">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 {statusFilter === 'all' ? 'All Cases' : statusFilter === 'pending' ? 'Pending Reviews' : statusFilter === 'overdue' ? 'Overdue' : statusFilter === 'due-today' ? 'Due Today' : 'Completed'} ({filteredCases.length})
               </h2>
-              {statusFilter !== 'pending' && (
-                <button onClick={() => setStatusFilter('pending')} className="text-xs text-primary hover:underline">
-                  Show pending
+              {statusFilter !== 'all' && (
+                <button onClick={() => setStatusFilter('all')} className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                  Show all
                 </button>
               )}
             </div>
@@ -787,7 +787,7 @@ export function OutcomeReview() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 max-w-4xl space-y-6">
+      <div className="flex-1 min-w-0 space-y-6">
 
       {/* Header Card */}
       <Card className="bg-primary text-primary-foreground">
