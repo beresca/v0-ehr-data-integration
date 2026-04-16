@@ -1,10 +1,10 @@
 import { AppShell } from '@/components/layout/app-shell'
-import { PIDashboard } from '@/components/screens/pi-dashboard'
+import { CohortReview } from '@/components/screens/cohort-review'
 
 export default function DashboardPage() {
   return (
     <AppShell>
-      <PIDashboard />
+      <CohortReview />
     </AppShell>
   )
 }
