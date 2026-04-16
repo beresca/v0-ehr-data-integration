@@ -44,7 +44,10 @@ import {
   Info,
   ChevronRight,
   User,
+  FileText,
+  X,
 } from 'lucide-react'
+import { EPCRViewer } from '@/components/epcr-viewer'
 
 // ─── Case Queue Data ──────────────────────────────────────────────────────────
 
@@ -530,6 +533,7 @@ export function OutcomeReview() {
   const initialCaseId = searchParams.get('id') || CASE_QUEUE.find(c => c.status !== 'complete')?.patientId || CASE_QUEUE[0].patientId
   const [selectedCaseId, setSelectedCaseId] = useState(initialCaseId)
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'overdue' | 'due-today' | 'complete'>('pending')
+  const [showFullEPCR, setShowFullEPCR] = useState(false)
   const selectedCase = CASE_QUEUE.find(c => c.patientId === selectedCaseId) || CASE_QUEUE[0]
   
   // Filter cases based on status filter
@@ -829,106 +833,24 @@ export function OutcomeReview() {
             </div>
           </div>
 
-          {/* Expandable ePCR + Blood Products Detail */}
-          <details className="mt-4 pt-4 border-t border-primary-foreground/20">
-            <summary className="cursor-pointer text-sm font-medium flex items-center gap-2 hover:opacity-80">
-              <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
-              View ePCR Data &amp; Scanned Products
+          {/* View Full ePCR Button */}
+          <div className="mt-4 pt-4 border-t border-primary-foreground/20">
+            <button
+              onClick={() => setShowFullEPCR(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors text-sm font-medium"
+            >
+              <FileText className="h-4 w-4" />
+              View Full ePCR Documentation
               <div className="flex gap-1.5 ml-2">
                 {selectedCase.epcrImported && (
-                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/30 text-blue-100">ePCR</span>
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/30 text-blue-100">NEMSIS</span>
                 )}
                 {selectedCase.bloodScanned && (
                   <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-400/30 text-red-100">{selectedCase.scannedProducts.length} units</span>
                 )}
               </div>
-            </summary>
-            
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              {/* ePCR Data */}
-              <div className="rounded-lg bg-primary-foreground/10 p-4">
-                <h4 className="text-xs uppercase tracking-wider opacity-70 mb-3">ePCR Documentation</h4>
-                {selectedCase.epcrImported ? (
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="opacity-70">Incident</span>
-                      <span className="font-mono font-medium">{selectedCase.incidentId}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-70">Chief Complaint</span>
-                      <span className="font-medium">{selectedCase.chief}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-70">Patient</span>
-                      <span className="font-medium">{selectedCase.age}y {selectedCase.gender === 'M' ? 'Male' : 'Female'}</span>
-                    </div>
-                    {selectedCase.vitals && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="opacity-70">Field SBP</span>
-                          <span className={cn('font-medium', selectedCase.vitals.sbp < 90 && 'text-red-300')}>{selectedCase.vitals.sbp} mmHg</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="opacity-70">Field HR</span>
-                          <span className={cn('font-medium', selectedCase.vitals.hr > 100 && 'text-amber-300')}>{selectedCase.vitals.hr} bpm</span>
-                        </div>
-                        {selectedCase.vitals.gcs && (
-                          <div className="flex justify-between">
-                            <span className="opacity-70">GCS</span>
-                            <span className={cn('font-medium', selectedCase.vitals.gcs < 14 && 'text-amber-300')}>{selectedCase.vitals.gcs}</span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm opacity-60 italic">No ePCR data imported for this incident</p>
-                )}
-              </div>
-
-              {/* Scanned Blood Products */}
-              <div className="rounded-lg bg-primary-foreground/10 p-4">
-                <h4 className="text-xs uppercase tracking-wider opacity-70 mb-3">Scanned Blood Products</h4>
-                {selectedCase.bloodScanned && selectedCase.scannedProducts.length > 0 ? (
-                  <div className="space-y-2">
-                    {selectedCase.scannedProducts.map((product) => (
-                      <div key={product.unitId} className="flex items-center justify-between text-sm bg-primary-foreground/10 rounded p-2">
-  <div className="flex items-center gap-2">
-    <span className={cn(
-      'px-2 py-0.5 rounded text-xs font-bold',
-      product.productType === 'LTOWB' ? 'bg-red-500 text-white' :
-      product.productType === 'pRBC' ? 'bg-red-700 text-white' : 'bg-amber-500 text-white'
-    )}>
-      {product.productType}
-    </span>
-    <span className="font-mono font-medium">{product.unitId}</span>
-  </div>
-  <div className="text-xs opacity-80 space-y-0.5">
-    <div className="flex items-center gap-2">
-      <span className="opacity-60">Scanned:</span> {product.scannedAt.split(' ')[1]}
-    </div>
-    {product.startTime && (
-      <div className="flex items-center gap-2">
-        <span className="opacity-60">Start:</span> 
-        <span className="text-green-300 font-medium">{product.startTime}</span>
-        {product.stopTime && (
-          <>
-            <span className="opacity-60">Stop:</span> 
-            <span className="text-amber-300 font-medium">{product.stopTime}</span>
-          </>
-        )}
-      </div>
-    )}
-  </div>
-  </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm opacity-60 italic">No blood products scanned for this incident</p>
-                )}
-              </div>
-            </div>
-          </details>
+            </button>
+          </div>
         </CardContent>
       </Card>
 
@@ -1269,6 +1191,22 @@ export function OutcomeReview() {
 
       </div>{/* End main content */}
       </div>{/* End flex row */}
+
+      {/* Full ePCR Viewer Modal */}
+      {showFullEPCR && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowFullEPCR(false)} />
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-auto m-4 rounded-lg shadow-xl">
+            <button
+              onClick={() => setShowFullEPCR(false)}
+              className="absolute right-4 top-4 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-sm"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <EPCRViewer patientId={selectedCase.patientId} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -57,6 +57,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart'
 import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts'
+import { EPCRViewer } from '@/components/epcr-viewer'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -233,6 +234,7 @@ export function CohortReview() {
   const [selectedCohort, setSelectedCohort] = useState<string | null>(null)
   const [showNewCohort, setShowNewCohort] = useState(false)
   const [showNewMeeting, setShowNewMeeting] = useState(false)
+  const [selectedPatientForEPCR, setSelectedPatientForEPCR] = useState<string | null>(null)
 
   // Cohort builder state
   const [cohortName, setCohortName] = useState('')
@@ -489,11 +491,12 @@ export function CohortReview() {
                     <TableHead>Product</TableHead>
                     <TableHead>SI</TableHead>
                     <TableHead>Outcome</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(cohortPatientsMap[selectedCohort] || []).map(p => (
-                    <TableRow key={p.id}>
+                    <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedPatientForEPCR(p.id)}>
                       <TableCell className="font-medium text-primary">{p.id}</TableCell>
                       <TableCell>{p.age}{p.sex}</TableCell>
                       <TableCell>{p.indication}</TableCell>
@@ -505,6 +508,12 @@ export function CohortReview() {
                         <Badge variant={p.outcome === 'Survived' ? 'default' : 'destructive'} className={p.outcome === 'Survived' ? 'bg-success text-success-foreground' : ''}>
                           {p.outcome}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); setSelectedPatientForEPCR(p.id) }}>
+                          <FileText className="h-3 w-3 mr-1" />
+                          ePCR
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -728,6 +737,22 @@ export function CohortReview() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* ePCR Viewer Modal */}
+      {selectedPatientForEPCR && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSelectedPatientForEPCR(null)} />
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-auto m-4 rounded-lg shadow-xl">
+            <button
+              onClick={() => setSelectedPatientForEPCR(null)}
+              className="absolute right-4 top-4 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-sm"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <EPCRViewer patientId={selectedPatientForEPCR} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
