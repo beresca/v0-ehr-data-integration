@@ -44,7 +44,10 @@ import {
   Info,
   ChevronRight,
   User,
+  FileText,
+  X,
 } from 'lucide-react'
+import { EPCRViewer } from '@/components/epcr-viewer'
 
 // ─── Case Queue Data ──────────────────────────────────────────────────────────
 
@@ -530,6 +533,7 @@ export function OutcomeReview() {
   const initialCaseId = searchParams.get('id') || CASE_QUEUE.find(c => c.status !== 'complete')?.patientId || CASE_QUEUE[0].patientId
   const [selectedCaseId, setSelectedCaseId] = useState(initialCaseId)
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'overdue' | 'due-today' | 'complete'>('pending')
+  const [showFullEPCR, setShowFullEPCR] = useState(false)
   const selectedCase = CASE_QUEUE.find(c => c.patientId === selectedCaseId) || CASE_QUEUE[0]
   
   // Filter cases based on status filter
@@ -550,7 +554,9 @@ export function OutcomeReview() {
     acReversal: false,
   })
   const [mtpRecipient, setMtpRecipient] = useState(false)
-  const [alive30Days, setAlive30Days] = useState<boolean | null>(true)
+  const [reactionReported, setReactionReported] = useState(selectedCase.transfusionReaction?.reported ?? false)
+  const [reactionType, setReactionType] = useState(selectedCase.transfusionReaction?.type ?? '')
+  const [reactionSeverity, setReactionSeverity] = useState(selectedCase.transfusionReaction?.severity ?? '')
   const [neuroOutcome, setNeuroOutcome] = useState<string>('')
   const [submitAttempted, setSubmitAttempted] = useState(false)
 
@@ -559,7 +565,9 @@ export function OutcomeReview() {
     setLabs(buildLabsForPatient(selectedCaseId))
     setInterventions({ laparotomy: false, intubation: false, thoracotomy: false, reboa: false, angiography: false, txa: false, acReversal: false })
     setMtpRecipient(false)
-    setAlive30Days(null)
+    setReactionReported(false)
+    setReactionType('')
+    setReactionSeverity('')
     setNeuroOutcome('')
     setSubmitAttempted(false)
   }, [selectedCaseId])
@@ -596,8 +604,7 @@ export function OutcomeReview() {
   const canSubmit =
     criticalUnresolved.length === 0 &&
     ehrUnreviewed.length === 0 &&
-    neuroOutcome !== '' &&
-    alive30Days !== null
+    neuroOutcome !== ''
 
   const blockingIssues = [
     ...criticalUnresolved.map((l) => ({
@@ -617,16 +624,15 @@ export function OutcomeReview() {
       message: `${l.test} has no value entered`,
     })),
     ...(neuroOutcome === '' ? [{ type: 'warning' as const, message: 'Neurological outcome is required' }] : []),
-    ...(alive30Days === null ? [{ type: 'warning' as const, message: '30-day survival status is required' }] : []),
   ]
 
-  const survivalMilestones = [
-    { label: 'Hospital Arrival', time: '0hr', complete: true },
-    { label: '6 hr', time: '6hr', complete: true },
-    { label: '24 hr', time: '24hr', complete: true },
-    { label: '72 hr', time: '72hr', complete: true },
-    { label: '30 days', time: '30d', complete: false },
-  ]
+  const [survivalMilestones, setSurvivalMilestones] = useState([
+    { label: 'Hospital Arrival', time: '0hr', complete: true, fixed: true },
+    { label: '6 hr', time: '6hr', complete: true, fixed: false },
+    { label: '24 hr', time: '24hr', complete: true, fixed: false },
+    { label: '72 hr', time: '72hr', complete: true, fixed: false },
+    { label: '30 days', time: '30d', complete: false, fixed: false },
+  ])
 
   // Summary counts for header pills
   const criticalCount = labs.filter((l) => { const s = getStatus(l); return s === 'critical-low' || s === 'critical-high' }).length
@@ -829,106 +835,24 @@ export function OutcomeReview() {
             </div>
           </div>
 
-          {/* Expandable ePCR + Blood Products Detail */}
-          <details className="mt-4 pt-4 border-t border-primary-foreground/20">
-            <summary className="cursor-pointer text-sm font-medium flex items-center gap-2 hover:opacity-80">
-              <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
-              View ePCR Data &amp; Scanned Products
+          {/* View Full ePCR Button */}
+          <div className="mt-4 pt-4 border-t border-primary-foreground/20">
+            <button
+              onClick={() => setShowFullEPCR(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors text-sm font-medium"
+            >
+              <FileText className="h-4 w-4" />
+              View Full ePCR Documentation
               <div className="flex gap-1.5 ml-2">
                 {selectedCase.epcrImported && (
-                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/30 text-blue-100">ePCR</span>
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/30 text-blue-100">NEMSIS</span>
                 )}
                 {selectedCase.bloodScanned && (
                   <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-400/30 text-red-100">{selectedCase.scannedProducts.length} units</span>
                 )}
               </div>
-            </summary>
-            
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              {/* ePCR Data */}
-              <div className="rounded-lg bg-primary-foreground/10 p-4">
-                <h4 className="text-xs uppercase tracking-wider opacity-70 mb-3">ePCR Documentation</h4>
-                {selectedCase.epcrImported ? (
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="opacity-70">Incident</span>
-                      <span className="font-mono font-medium">{selectedCase.incidentId}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-70">Chief Complaint</span>
-                      <span className="font-medium">{selectedCase.chief}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-70">Patient</span>
-                      <span className="font-medium">{selectedCase.age}y {selectedCase.gender === 'M' ? 'Male' : 'Female'}</span>
-                    </div>
-                    {selectedCase.vitals && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="opacity-70">Field SBP</span>
-                          <span className={cn('font-medium', selectedCase.vitals.sbp < 90 && 'text-red-300')}>{selectedCase.vitals.sbp} mmHg</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="opacity-70">Field HR</span>
-                          <span className={cn('font-medium', selectedCase.vitals.hr > 100 && 'text-amber-300')}>{selectedCase.vitals.hr} bpm</span>
-                        </div>
-                        {selectedCase.vitals.gcs && (
-                          <div className="flex justify-between">
-                            <span className="opacity-70">GCS</span>
-                            <span className={cn('font-medium', selectedCase.vitals.gcs < 14 && 'text-amber-300')}>{selectedCase.vitals.gcs}</span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm opacity-60 italic">No ePCR data imported for this incident</p>
-                )}
-              </div>
-
-              {/* Scanned Blood Products */}
-              <div className="rounded-lg bg-primary-foreground/10 p-4">
-                <h4 className="text-xs uppercase tracking-wider opacity-70 mb-3">Scanned Blood Products</h4>
-                {selectedCase.bloodScanned && selectedCase.scannedProducts.length > 0 ? (
-                  <div className="space-y-2">
-                    {selectedCase.scannedProducts.map((product) => (
-                      <div key={product.unitId} className="flex items-center justify-between text-sm bg-primary-foreground/10 rounded p-2">
-  <div className="flex items-center gap-2">
-    <span className={cn(
-      'px-2 py-0.5 rounded text-xs font-bold',
-      product.productType === 'LTOWB' ? 'bg-red-500 text-white' :
-      product.productType === 'pRBC' ? 'bg-red-700 text-white' : 'bg-amber-500 text-white'
-    )}>
-      {product.productType}
-    </span>
-    <span className="font-mono font-medium">{product.unitId}</span>
-  </div>
-  <div className="text-xs opacity-80 space-y-0.5">
-    <div className="flex items-center gap-2">
-      <span className="opacity-60">Scanned:</span> {product.scannedAt.split(' ')[1]}
-    </div>
-    {product.startTime && (
-      <div className="flex items-center gap-2">
-        <span className="opacity-60">Start:</span> 
-        <span className="text-green-300 font-medium">{product.startTime}</span>
-        {product.stopTime && (
-          <>
-            <span className="opacity-60">Stop:</span> 
-            <span className="text-amber-300 font-medium">{product.stopTime}</span>
-          </>
-        )}
-      </div>
-    )}
-  </div>
-  </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm opacity-60 italic">No blood products scanned for this incident</p>
-                )}
-              </div>
-            </div>
-          </details>
+            </button>
+          </div>
         </CardContent>
       </Card>
 
@@ -1036,96 +960,13 @@ export function OutcomeReview() {
         </CardContent>
       </Card>
 
-      {/* SEMSTAR Survival */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold">SEMSTAR Survival</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            {survivalMilestones.map((milestone, index) => (
-              <div key={milestone.label} className="flex flex-col items-center">
-                <div className="relative flex items-center">
-                  {index > 0 && (
-                    <div className={cn(
-                      'absolute right-full h-0.5 w-16',
-                      survivalMilestones[index - 1].complete ? 'bg-green-400' : 'bg-border'
-                    )} />
-                  )}
-                  <div className={cn(
-                    'flex h-10 w-10 items-center justify-center rounded-full border-2',
-                    milestone.complete
-                      ? 'border-green-400 bg-green-400 text-white'
-                      : 'border-border bg-muted text-muted-foreground'
-                  )}>
-                    {milestone.complete
-                      ? <CheckCircle className="h-5 w-5" />
-                      : <span className="text-xs font-medium">{milestone.time}</span>}
-                  </div>
-                </div>
-                <span className={cn(
-                  'mt-2 text-xs',
-                  milestone.complete ? 'text-foreground' : 'text-muted-foreground'
-                )}>
-                  {milestone.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Transfusion Reaction */}
-      <Card className={cn(selectedCase.transfusionReaction?.reported && "border-amber-500/50 bg-amber-50/30")}>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              Transfusion Reaction
-              {selectedCase.transfusionReaction?.reported && (
-                <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-100">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  Reported
-                </Badge>
-              )}
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {selectedCase.transfusionReaction?.reported ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground text-xs">Reaction Type</Label>
-                  <p className="font-medium">{selectedCase.transfusionReaction.type}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Severity</Label>
-                  <Badge variant={selectedCase.transfusionReaction.severity === 'Severe' ? 'destructive' : selectedCase.transfusionReaction.severity === 'Moderate' ? 'default' : 'secondary'}>
-                    {selectedCase.transfusionReaction.severity}
-                  </Badge>
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground pt-2 border-t">
-                This case will be flagged in cohort reports and can be filtered for QI review.
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">No transfusion reaction reported</p>
-              <Button variant="outline" size="sm" className="text-xs">
-                Report Reaction
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Hospital Interventions */}
       <Card>
-      <CardHeader className="pb-4">
-      <CardTitle className="text-base font-semibold">Hospital Interventions</CardTitle>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-semibold">Hospital Interventions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Procedures */}
           <div className="grid grid-cols-2 gap-3">
             {[
               { key: 'laparotomy', label: 'Exploratory laparotomy' },
@@ -1150,6 +991,8 @@ export function OutcomeReview() {
               </div>
             ))}
           </div>
+
+          {/* MTP */}
           <div className="flex items-center justify-between rounded-md border p-3">
             <p className="text-sm font-medium">MTP Recipient</p>
             <div className="flex items-center gap-3">
@@ -1158,15 +1001,149 @@ export function OutcomeReview() {
               <span className="text-sm text-muted-foreground">Yes</span>
             </div>
           </div>
+
+          {/* Additional Blood Products */}
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold">Additional Blood Products (First 4 Hours)</h4>
+              <span className="text-xs text-muted-foreground">Via EHR or manual entry</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">pRBC Units</Label>
+                <Input type="number" placeholder="0" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Whole Blood Units</Label>
+                <Input type="number" placeholder="0" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Plasma Units</Label>
+                <Input type="number" placeholder="0" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Platelet Units</Label>
+                <Input type="number" placeholder="0" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Cryoprecipitate Units</Label>
+                <Input type="number" placeholder="0" className="h-9" />
+              </div>
+            </div>
+          </div>
+
+          {/* Transfusion Reaction */}
+          <div className={cn('space-y-3 pt-2 border-t', reactionReported && 'rounded-lg bg-amber-50/50 p-3 -mx-3')}>
+            <div className="flex items-center justify-between">
+              <h4 className={cn('text-sm font-semibold flex items-center gap-2', reactionReported && 'text-amber-800')}>
+                Transfusion Reaction
+                {reactionReported && (
+                  <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-100">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Reported
+                  </Badge>
+                )}
+              </h4>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground text-xs">Reaction occurred</span>
+                <Switch checked={reactionReported} onCheckedChange={setReactionReported} />
+              </div>
+            </div>
+            {reactionReported && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Reaction Type</Label>
+                  <Select value={reactionType} onValueChange={setReactionType}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Febrile">Febrile (FNHTR)</SelectItem>
+                      <SelectItem value="Allergic">Allergic</SelectItem>
+                      <SelectItem value="TRALI">TRALI</SelectItem>
+                      <SelectItem value="TACO">TACO</SelectItem>
+                      <SelectItem value="Hemolytic-Acute">Hemolytic – Acute</SelectItem>
+                      <SelectItem value="Hemolytic-Delayed">Hemolytic – Delayed</SelectItem>
+                      <SelectItem value="Septic">Septic</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Severity</Label>
+                  <Select value={reactionSeverity} onValueChange={setReactionSeverity}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select severity" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Mild">Mild</SelectItem>
+                      <SelectItem value="Moderate">Moderate</SelectItem>
+                      <SelectItem value="Severe">Severe</SelectItem>
+                      <SelectItem value="Life-threatening">Life-threatening</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <Label className="text-xs text-muted-foreground">Unit(s) Implicated</Label>
+                  <Select>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select unit" /></SelectTrigger>
+                    <SelectContent>
+                      {selectedCase.scannedProducts.map(p => (
+                        <SelectItem key={p.unitId} value={p.unitId}>{p.unitId} ({p.productType})</SelectItem>
+                      ))}
+                      <SelectItem value="unknown">Unknown</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="col-span-2 text-xs text-muted-foreground border-t pt-2">
+                  This case will be flagged in cohort reports and can be filtered for QI review.
+                </p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Outcome */}
+      {/* Assessments */}
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold">Outcome</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">Assessments</CardTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">Via trauma registry integration or manual entry</p>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold">Injury Severity Score (ISS) by Body Region</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {['Head', 'Face', 'Neck', 'Chest', 'Abdomen', 'Spine', 'Upper Extremity', 'Lower Extremity'].map(region => (
+                <div key={region} className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">{region} (AIS 0–6)</Label>
+                  <Select>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="0" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0 – No injury</SelectItem>
+                      <SelectItem value="1">1 – Minor</SelectItem>
+                      <SelectItem value="2">2 – Moderate</SelectItem>
+                      <SelectItem value="3">3 – Serious</SelectItem>
+                      <SelectItem value="4">4 – Severe</SelectItem>
+                      <SelectItem value="5">5 – Critical</SelectItem>
+                      <SelectItem value="6">6 – Unsurvivable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-4 pt-1">
+              <Label className="text-sm font-medium">Calculated ISS:</Label>
+              <span className="text-lg font-bold text-primary">--</span>
+              <span className="text-xs text-muted-foreground">(Sum of squares of top 3 body region AIS scores)</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Outcomes */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-semibold">Outcomes</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Neurological Outcome */}
           <div className="space-y-2">
             <Label className={cn(submitAttempted && neuroOutcome === '' ? 'text-red-600' : '')}>
               Neurological outcome <span className="text-red-500">*</span>
@@ -1184,29 +1161,88 @@ export function OutcomeReview() {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label className={cn(submitAttempted && alive30Days === null ? 'text-red-600' : '')}>
-              Alive at 30 days <span className="text-red-500">*</span>
-            </Label>
-            <div className="flex gap-2">
-              {[
-                { value: true, label: 'Yes' },
-                { value: false, label: 'No' },
-                { value: null, label: 'Unknown' },
-              ].map((option) => (
-                <button
-                  key={String(option.value)}
-                  type="button"
-                  onClick={() => setAlive30Days(option.value)}
-                  className={cn(
-                    'flex-1 rounded-md border px-4 py-2.5 text-sm font-medium transition-all',
-                    alive30Days === option.value
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border hover:border-primary/50 hover:bg-muted'
-                  )}
-                >
-                  {option.label}
-                </button>
+          {/* Mortality Details */}
+          <div className="space-y-3 pt-2 border-t">
+            <h4 className="text-sm font-semibold text-muted-foreground">Mortality (if applicable)</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Date/Time of Death</Label>
+                <Input type="datetime-local" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Days Until Death After Arrival</Label>
+                <Input type="number" placeholder="Days" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Death Attributed to Hemorrhage</Label>
+                <Select>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Yes</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* SEMSTAR Survival */}
+          <div className="space-y-4 pt-2 border-t">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold">SEMSTAR Survival</h4>
+              <span className="text-xs text-muted-foreground">Click a milestone to toggle</span>
+            </div>
+            <div className="flex items-center justify-between">
+              {survivalMilestones.map((milestone, index) => (
+                <div key={milestone.label} className="flex flex-col items-center">
+                  <div className="relative flex items-center">
+                    {index > 0 && (
+                      <div className={cn(
+                        'absolute right-full h-0.5 w-16',
+                        survivalMilestones[index - 1].complete ? 'bg-green-400' : 'bg-border'
+                      )} />
+                    )}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={milestone.fixed}
+                            onClick={() => {
+                              if (milestone.fixed) return
+                              setSurvivalMilestones(prev => prev.map((m, i) => i === index ? { ...m, complete: !m.complete } : m))
+                            }}
+                            className={cn(
+                              'flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all',
+                              milestone.fixed ? 'cursor-default' : 'cursor-pointer hover:scale-110',
+                              milestone.complete
+                                ? 'border-green-400 bg-green-400 text-white'
+                                : 'border-border bg-muted text-muted-foreground hover:border-green-300'
+                            )}
+                          >
+                            {milestone.complete
+                              ? <CheckCircle className="h-5 w-5" />
+                              : <span className="text-xs font-medium">{milestone.time}</span>}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {milestone.fixed
+                            ? 'Hospital arrival — always recorded'
+                            : milestone.complete
+                              ? `Patient alive at ${milestone.label} — click to mark deceased`
+                              : `Patient deceased by ${milestone.label} — click to mark alive`}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <span className={cn(
+                    'mt-2 text-xs',
+                    milestone.complete ? 'text-foreground' : 'text-muted-foreground'
+                  )}>
+                    {milestone.label}
+                  </span>
+                </div>
               ))}
             </div>
           </div>
@@ -1269,6 +1305,22 @@ export function OutcomeReview() {
 
       </div>{/* End main content */}
       </div>{/* End flex row */}
+
+      {/* Full ePCR Viewer Modal */}
+      {showFullEPCR && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowFullEPCR(false)} />
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-auto m-4 rounded-lg shadow-xl">
+            <button
+              onClick={() => setShowFullEPCR(false)}
+              className="absolute right-4 top-4 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-sm"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <EPCRViewer patientId={selectedCase.patientId} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

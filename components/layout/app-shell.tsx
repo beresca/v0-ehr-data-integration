@@ -23,9 +23,8 @@ import {
 const navItems = [
   { href: '/', label: 'Field Documentation', icon: FileText },
   { href: '/outcomes', label: 'Outcome Review', icon: ClipboardCheck },
-  { href: '/dashboard', label: 'Cohort Review', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'PI Review', icon: LayoutDashboard },
   { href: '/registry', label: 'Program Analytics', icon: Database },
-  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -120,18 +119,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <h1 className="text-lg font-semibold text-foreground">
             {navItems.find((item) => item.href === pathname)?.label || 'BloodTrack'}
           </h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5 text-muted-foreground" />
               <Badge className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-accent p-0 text-[10px] text-accent-foreground">
                 3
               </Badge>
             </Button>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-medium">ImageTrend</span>
-              <span className="text-border">|</span>
-              <span>biospatial</span>
-            </div>
+            <Link href="/settings">
+              <Button variant="ghost" size="icon">
+                <Settings className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            </Link>
           </div>
         </header>
 
